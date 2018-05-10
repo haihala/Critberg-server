@@ -36,7 +36,7 @@ class Network(object):
     def loop(self):
         while self.running:
 
-            self.readable, [], self.exceptional = select(self.inputs, [], self.inputs)
+            readable, [], exceptional = select(self.inputs, [], self.inputs, 10)
 
             for s in readable:
                 if s is server:
@@ -73,7 +73,6 @@ class Network(object):
                 # Other end of connection was closed suddenly
                 self.disconnect([i for i in self._inbox if i.socket == s][0])
 
-        print('dsadas')
         self.listen_socket.close()
 
     def get_packet(self, sock):
