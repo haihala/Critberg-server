@@ -31,13 +31,11 @@ class Network(object):
         self.listen_socket.listen(10)  # enough to prevent weird errors, small enough to prevent ddos.
 
         self.inputs = [self.listen_socket]
-        self.outputs = []
-        self.message_queues = {}
 
     def loop(self):
         while self.running:
 
-            self.readable, self.writable, self.exceptional = select(self.inputs, self.outputs, self.inputs)
+            self.readable, [], self.exceptional = select(self.inputs, [], self.inputs)
             
             for s in readable:
                 if s is server:
@@ -68,7 +66,11 @@ class Network(object):
                     for user in self._inbox:
                         if user.socket == s:
                             self._inbox[user].append(packet)
-                            break            
+                            break
+            
+            for s in exceptional:
+                # Other end of connection was closed suddenly
+                self.disconnect([i for i in self._inbox if i.socket == s][0])
 
         self.listen_socket.close()
 
@@ -111,3 +113,4 @@ class Network(object):
     def disconnect(self, user):
         user.socket.close()
         del self._inbox[user]
+        self.inputs.remove(user.socket)
