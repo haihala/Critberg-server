@@ -28,7 +28,7 @@ class Network(object):
         # Todo: Handle errors in binding ports
         self.listen_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-        self.listen_socket.bind(('localhost', kwargs["networking"]["port"]))
+        self.listen_socket.bind(('', kwargs["networking"]["port"]))
         self.listen_socket.listen(10)  # enough to prevent weird errors, small enough to prevent ddos.
 
         self.inputs = [self.listen_socket]
@@ -36,10 +36,10 @@ class Network(object):
     def loop(self):
         while self.running:
 
-            readable, [], exceptional = select(self.inputs, [], self.inputs, 10)
+            readable, [], exceptional = select(self.inputs, [], self.inputs)
 
             for s in readable:
-                if s is server:
+                if s is socket:
                     connection, client_address = s.accept()
                     connection.setblocking(0)
                     inputs.append(connection)
@@ -48,7 +48,7 @@ class Network(object):
                     self._generic_inbox.append(new_user_packet(connection, client_address))
 
                 else:
-                    packet = get_packet(s)
+                    packet = self.get_packet(s)
                     if not packet:
                         continue
 
@@ -77,7 +77,7 @@ class Network(object):
 
     def get_packet(self, sock):
         data = b''
-        while data[-1] != b'\n':
+        while len(data) == 0 or data[-1] != b'\n':
             # newline can only be present if the transmission has ended. This is to assure the entire thing comes through as one.
             # recv timeout would be really cool here.
             data += sock.recv(1024)
