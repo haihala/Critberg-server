@@ -19,4 +19,5 @@ class GameObject(object):
         self.cardText = None
         self.owner = None
 
-        self.events = []
+        self.triggered = []
+        self.activated = []
