@@ -5,7 +5,7 @@ Will eventually contain the class used for an interface to manage games.
 
 from .instance_engine import Instance_engine
 from util.errors import NOT_ACTIVE_PLAYER_ERROR
-from util.packet import *
+from util.packet import identify_prompt, message_packet, disconnect_packet
 
 
 class Master_engine(object):

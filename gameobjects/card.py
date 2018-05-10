@@ -5,7 +5,7 @@ Card itself is an abstract class.
 """
 
 from .gameobject import GameObject
-from utils.config import Resources
+from util.config import Resources
 
 class Card(GameObject):
     def __init__(self):

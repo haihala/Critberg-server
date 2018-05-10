@@ -4,7 +4,7 @@ Represents the players of the game.
 """
 
 from .gameobject import GameObject
-from utils.config import Resources
+from util.config import Resources
 
 class Player(object):
     """
