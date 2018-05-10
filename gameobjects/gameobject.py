@@ -14,4 +14,10 @@ Mostly used to define targetings and whatnot. Gameobjects have a hiararchy that 
 
 class GameObject(object):
     def __init__(self):
-        pass
+        self.name = None
+        self.image = None
+        self.cardText = None
+        self.owner = None
+
+        self.triggered = []
+        self.activated = []
