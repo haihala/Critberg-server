@@ -21,7 +21,7 @@ class Network(object):
         # List of messages that either don't yet have a user to associate them with
         # or come from elsewhere, such as console commands.
 
-        self.unverified = {}
+        self.unverified = []
         # List of users connected, but never verified.
         # key is socket, value is address-deletable tuple.
 
@@ -39,10 +39,10 @@ class Network(object):
             readable, [], exceptional = select(self.inputs, [], self.inputs)
 
             for s in readable:
-                if s is socket:
+                if s is self.listen_socket:
                     connection, client_address = s.accept()
                     connection.setblocking(0)
-                    inputs.append(connection)
+                    self.inputs.append(connection)
 
                     self.unverified.append([connection, client_address, False])
                     self._generic_inbox.append(new_user_packet(connection, client_address))
@@ -105,7 +105,8 @@ class Network(object):
         user.socket.send(packet_encode(packet))
 
     def reply(self, original, reply):
-        original["socket"].send(packet_encode(reply))
+        print(reply)
+        original["socket"].send(reply)
 
     def broadcast(self, packet):
         for user in self._inbox:
