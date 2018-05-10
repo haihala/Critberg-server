@@ -9,7 +9,7 @@ from copy import deepcopy
 from random import choice
 from uuid import UUID
 
-class Master_engine(object):
+class Instance_engine(object):
     def __init__(self, players):
         self.players = players
         self.gameobjects = {}
