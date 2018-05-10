@@ -14,6 +14,7 @@ class Instance_engine(object):
         self.players = players
         self.gameobjects = {}
         self.active_player = choice(self.players)
+        self.over = False
 
         for player in self.players:
             self.add_gameobject(player)

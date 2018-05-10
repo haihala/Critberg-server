@@ -3,8 +3,9 @@ Will eventually contain the class used for an interface to manage games.
 
 """
 
+from .instance_engine import Instance_engine
 from util.packet import *
-# Should not be * but fix later
+
 
 class Master_engine(object):
     def __init__(self, network_handle, args):
@@ -12,6 +13,7 @@ class Master_engine(object):
         self.network_handle = network_handle
         self.args = args
         self.users = []
+        self.instances = {}
 
     def loop(self):
         while self.running:
@@ -19,11 +21,54 @@ class Master_engine(object):
                 if generic["type"] == "new_user":
                     self.network_handle.reply(generic, identify_prompt())
             
+            disconnected = []
+
             for user in self.users:
                 for message in self.network_handle.get_unreads(user)
                     if message["type"] == "message":
-                        self.network_handle.send(message["target"])
+                        self.network_handle.send(user_called(message["target"]), message_packet(user, message["content"]))
                     elif message["type"] == "disconnect":
-                        self.network_handle.broadcast(disconnect_packet(user.name, user.address))
+                        self.network_hazndle.broadcast(disconnect_packet(user.name, user.address))
                         self.network_handle.disconnect(user)
-                        self.users
+                        disconnected.append(user)
+                    elif message["type"] == "queue":
+                        self.queue.append((user, message["deck"]))
+                        # at some point, verify deck.
+                    elif message["type"] == "game_action":
+                        if user in self.instances:
+                            self.instances[user].tick(message)
+
+            if len(self.queue) >= 2:
+                self.start_instance(self.queue[:2])
+                
+            for user in disconnect:
+                self.users.remove(user)
+
+            for user, game in self.instances:
+                if game.over:
+                    for player in game.players:
+                        del self.instances[player]
+                        # Should work, could have issues with elements being removed mid-iteration
+
+    def start_instance(self, players):
+        new_instance = Instance_engine(players)
+        for player in players:
+            self.instances[player] = new_instance
+
+    def user_called(self, name):
+        try:
+            return [i for i in self.users if i.name == name][0]
+        except IndexError:
+            return None
+
+    def user_from(self, addr):
+        try:
+            return [i for i in self.users if i.address == addr][0]
+        except IndexError:
+            return None
+
+    def user_at(self, sock):
+        try:
+            return [i for i in self.users if i.socket == sock][0]
+        except IndexError:
+            return None

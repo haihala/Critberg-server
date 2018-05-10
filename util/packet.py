@@ -34,6 +34,12 @@ def disconnect_packet(name, addr):
         "address": addr
     })
 
+def disconnect_packet(name, content):
+    return packet_encode({
+        "type": "message",
+        "sender": name,
+        "content": content
+    })
 
 
 def packet_encode(packet):
