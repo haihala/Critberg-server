@@ -8,8 +8,8 @@ from engine.master_engine import Master_engine
 from util.networking import Network
 from util.args_parser import parse_args
 
-import threading
 import sys
+import threading
 
 def main(args):
     args = parse_args(args)
