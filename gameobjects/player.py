@@ -4,6 +4,7 @@ Represents the players of the game.
 """
 
 from .gameobject import GameObject
+from utils.config import Resources
 
 class Player(object):
     """
@@ -12,7 +13,7 @@ class Player(object):
     def __init__(self):
         super(self)
         self.health = 0
-        self.resource = {}
+        self.resource = {i: 0 for i in Resources}
         self.hand = []
         self.deck = []
         self.AZone = []
