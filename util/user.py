@@ -6,6 +6,7 @@ Each player is a user always, but only has a corresponding player object when in
 class User(object):
     def __init__(self, name, network_handle):
         self.name = name
-        self.network_handle = network_handle
+        self.socket = network_handle[0]
+        self.address = network_handle[1]
 
         self.player = None
