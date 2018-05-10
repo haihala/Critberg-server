@@ -4,6 +4,7 @@ Will eventually contain the class used for an interface to manage games.
 """
 
 from .instance_engine import Instance_engine
+from util.errors import NOT_ACTIVE_PLAYER_ERROR
 from util.packet import *
 
 
@@ -27,9 +28,9 @@ class Master_engine(object):
             for user in self.users:
                 for message in self.network_handle.get_unreads(user):
                     if message["type"] == "message":
-                        self.network_handle.send(user_called(message["target"]), message_packet(user, message["content"]))
+                        self.network_handle.send(self.user_called(message["target"]), message_packet(user, message["content"]))
                     elif message["type"] == "disconnect":
-                        self.network_hazndle.broadcast(disconnect_packet(user.name, user.address))
+                        self.network_handle.broadcast(disconnect_packet(user.name, user.address))
                         self.network_handle.disconnect(user)
                         disconnected.append(user)
                     elif message["type"] == "queue":
@@ -37,7 +38,10 @@ class Master_engine(object):
                         # at some point, verify deck.
                     elif message["type"] == "game_action":
                         if user in self.instances:
-                            self.instances[user].tick(message)
+                            if user is self.instances[user].active_player:
+                                self.instances[user].tick(message)
+                            else:
+                                self.network_handle.send(user, NOT_ACTIVE_PLAYER_ERROR)
 
             if len(self.queue) >= 2:
                 self.start_instance(self.queue[:2])

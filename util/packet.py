@@ -34,10 +34,10 @@ def disconnect_packet(name, addr):
         "address": addr
     })
 
-def disconnect_packet(name, content):
+def message_packet(sender, content):
     return packet_encode({
         "type": "message",
-        "sender": name,
+        "sender": sender,
         "content": content
     })
 
@@ -48,5 +48,5 @@ def packet_encode(packet):
 def packet_decode(data):
     try:  # Given faulty bytes, loads can fail.
         return loads(data.decode("UTF-8"))
-    except json.decoder.JSONDecodeError:
+    except JSONDecodeError:
         return None
