@@ -3,7 +3,7 @@ Abstraction of the networking. Used to parse packages to usable format, etcetera
 
 """
 
-from .packet import packet_decode, packet_encode, new_user_packet
+from .packet import packet_decode, packet_encode, new_user_packet, identify_response
 from .user import User
 
 from select import select
@@ -21,7 +21,7 @@ class Network(object):
         # List of messages that either don't yet have a user to associate them with
         # or come from elsewhere, such as console commands.
 
-        self.unverified = []
+        self.unverified = {}
         # List of users connected, but never verified.
         # key is socket, value is address-deletable tuple.
 
@@ -38,25 +38,26 @@ class Network(object):
 
             readable, [], exceptional = select(self.inputs, [], self.inputs)
 
-            for s in readable:
-                if s is self.listen_socket:
-                    connection, client_address = s.accept()
-                    connection.setblocking(0)
-                    self.inputs.append(connection)
+            for sock in readable:
+                if sock is self.listen_socket:
+                    client_socket, client_address = sock.accept()
+                    client_socket.setblocking(0)
+                    self.inputs.append(client_socket)
 
-                    self.unverified.append([connection, client_address, False])
-                    self._generic_inbox.append(new_user_packet(connection, client_address))
+                    # self.unverified.append([connection, client_address, False])
+                    self.unverified[client_socket] = (client_address, False)
+                    self._generic_inbox.append(new_user_packet(client_socket, client_address))
 
                 else:
-                    packet = self.get_packet(s)
+                    packet = self.get_packet(sock)
                     if not packet:
                         continue
 
-                    if s in self.unverified:
+                    if sock in self.unverified:
                         if packet["type"] == "identify":
                             if packet["name"] not in [i.name for i in self._inbox]:
                                 # User with that name doesn't exist.
-                                self.add_user((sock, addr), packet["name"])
+                                self.add_user((sock, self.unverified[sock][1]), packet["name"])
                                 deletable = True
                                 # Might not work, because of references, but hope it does
                             else:
@@ -65,13 +66,13 @@ class Network(object):
                     self.unverified = {i: self.unverified[i] for i in self.unverified if not self.unverified[i][1]}
 
                     for user in self._inbox:
-                        if user.socket == s:
+                        if user.socket == sock:
                             self._inbox[user].append(packet)
                             break
 
-            for s in exceptional:
+            for sock in exceptional:
                 # Other end of connection was closed suddenly
-                self.disconnect([i for i in self._inbox if i.socket == s][0])
+                self.disconnect([i for i in self._inbox if i.socket == sock][0])
 
         self.listen_socket.close()
 
@@ -80,7 +81,10 @@ class Network(object):
         while len(data) == 0 or data[-1] != b'\n':
             # newline can only be present if the transmission has ended. This is to assure the entire thing comes through as one.
             # recv timeout would be really cool here.
-            data += sock.recv(1024)
+            tmp = sock.recv(1024)
+            data += tmp
+            if len(tmp) < 1024:
+                break
 
         return packet_decode(data)
         # Packet field existance is checked in packet_parse
@@ -88,7 +92,7 @@ class Network(object):
     def add_user(self, network_handle, name):
         # Called from main engine. Before this, a generic is raised to ask for a name.
         new_user = User(name, network_handle)
-        self._generic_inbox.append(identification_response(name, *network_handle))
+        self._generic_inbox.append(identify_response(name, *network_handle))
         self._inbox[new_user] = []
 
     def get_unreads(self, user):
@@ -105,7 +109,6 @@ class Network(object):
         user.socket.send(packet_encode(packet))
 
     def reply(self, original, reply):
-        print(reply)
         original["socket"].send(reply)
 
     def broadcast(self, packet):
