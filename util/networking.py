@@ -7,7 +7,7 @@ from .packet import packet_decode, packet_encode, new_user_packet
 from .user import User
 
 from select import select
-from socket import socket
+import socket
 
 class Network(object):
     def __init__(self, kwargs):
@@ -26,8 +26,9 @@ class Network(object):
         # key is socket, value is address-deletable tuple.
 
         # Todo: Handle errors in binding ports
-        self.listen_socket = socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.listen_socket.bind((None, kwargs["networking"]["port"]))
+        self.listen_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+        self.listen_socket.bind(('localhost', kwargs["networking"]["port"]))
         self.listen_socket.listen(10)  # enough to prevent weird errors, small enough to prevent ddos.
 
         self.inputs = [self.listen_socket]
@@ -36,7 +37,7 @@ class Network(object):
         while self.running:
 
             self.readable, [], self.exceptional = select(self.inputs, [], self.inputs)
-            
+
             for s in readable:
                 if s is server:
                     connection, client_address = s.accept()
@@ -67,14 +68,15 @@ class Network(object):
                         if user.socket == s:
                             self._inbox[user].append(packet)
                             break
-            
+
             for s in exceptional:
                 # Other end of connection was closed suddenly
                 self.disconnect([i for i in self._inbox if i.socket == s][0])
 
+        print('dsadas')
         self.listen_socket.close()
 
-    def get_packet(self, sock)
+    def get_packet(self, sock):
         data = b''
         while data[-1] != b'\n':
             # newline can only be present if the transmission has ended. This is to assure the entire thing comes through as one.
@@ -87,7 +89,7 @@ class Network(object):
     def add_user(self, network_handle, name):
         # Called from main engine. Before this, a generic is raised to ask for a name.
         new_user = User(name, network_handle)
-        self._generic_inbox.append(identification_response(name, *network_handle))        
+        self._generic_inbox.append(identification_response(name, *network_handle))
         self._inbox[new_user] = []
 
     def get_unreads(self, user):

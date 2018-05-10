@@ -3,7 +3,7 @@ Module for handling packets. Mostly used to create commonly used packets.
 
 """
 from json import dumps, loads
-from json.decoder import JSONDecodeError, 
+from json.decoder import JSONDecodeError
 
 # Incoming
 def new_user_packet(sock, addr):

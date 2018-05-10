@@ -14,7 +14,7 @@ import threading
 def main(args):
     args = parse_args(args)
 
-    network_handle = Network(args["networking"])
+    network_handle = Network(args)
     network_thread = threading.Thread(target=network_handle.loop)
     network_thread.start()
 

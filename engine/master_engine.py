@@ -14,17 +14,18 @@ class Master_engine(object):
         self.args = args
         self.users = []
         self.instances = {}
+        self.queue = []
 
     def loop(self):
         while self.running:
             for generic in self.network_handle.get_generics():
                 if generic["type"] == "new_user":
                     self.network_handle.reply(generic, identify_prompt())
-            
+
             disconnected = []
 
             for user in self.users:
-                for message in self.network_handle.get_unreads(user)
+                for message in self.network_handle.get_unreads(user):
                     if message["type"] == "message":
                         self.network_handle.send(user_called(message["target"]), message_packet(user, message["content"]))
                     elif message["type"] == "disconnect":
@@ -40,8 +41,8 @@ class Master_engine(object):
 
             if len(self.queue) >= 2:
                 self.start_instance(self.queue[:2])
-                
-            for user in disconnect:
+
+            for user in disconnected:
                 self.users.remove(user)
 
             for user, game in self.instances:
@@ -49,6 +50,7 @@ class Master_engine(object):
                     for player in game.players:
                         del self.instances[player]
                         # Should work, could have issues with elements being removed mid-iteration
+        print('asd')
 
     def start_instance(self, players):
         new_instance = Instance_engine(players)
