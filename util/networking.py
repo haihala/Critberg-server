@@ -2,7 +2,6 @@
 Abstraction of the networking. Used to parse packages to usable format, etcetera.
 
 """
-
-
-def init():
-    pass
+class Network(object):
+    def __init__(self, kwargs):
+        pass
