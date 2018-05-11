@@ -41,3 +41,12 @@ class Stack():
         # For example, something could take into account the height of the stack.
         # Storm fixed boys?
         return self._stack.items()
+
+    def empty(self):
+        # True if empty, false if not
+        return not bool(len(self._stack))
+
+    def peek_next(self):
+        pair = self.pop()
+        self.push(*pair)
+        return pair
