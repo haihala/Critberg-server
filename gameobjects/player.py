@@ -25,3 +25,7 @@ class Player(GameObject):
         self.exile = []
 
         self.user = user
+
+    def can_afford(self, card):
+        # TODO
+        return True

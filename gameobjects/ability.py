@@ -13,4 +13,8 @@ class Ability(GameObject):
     def __init__(self):
         super(Ability, self).__init__()
         self.ability = None
-        self.max_activations = None  # Per turn
+        self.speed = None
+        self.max_activations = None     # Per turn
+        self.activations = 0
+        self.parent = None              # Permanent this is attatched to
+        self.usable_zones = []          # Zones this can be used in

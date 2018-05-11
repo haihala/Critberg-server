@@ -8,22 +8,30 @@ type_params: list of gameobjects that should match the accepted parameters in TR
 
 """
 
+from .ability import Ability
 from .card import Card
 from .creature import Creature
 from .gameobject import GameObject
+from .permanent import Permanent
 from .player import Player
 
 
 TRIGGER_TYPES: {
     # "Name of trigger": [first_param_type, [Possible, types, of, second, param]]
-    "HEAL": [[Creature, Player], int],  # Something heals something
-    "HURT": [[Creature, Player], int],  # Something does damage to something
-    "DRAW": [Player, Card],             # Somebody draws a card. Drawing many cards is done by repeating this.
-    "ATTACK": [Creature, Creature],     # Something attacks something
-    "DEFEND": [Creature, Creature],     # Something is attacked by something
-    "END_OF_TURN": [Player],            # Somebodys turn ends
-    "START_OF_TURN": [Player],          # Somebodys turn starts
-    "ZONE_CHANGE": [GameObject, str],   # Something is moved to a different zone (dying is just moving from the battlefield to the grave.)
+    "HEAL": [[Creature, Player], int],          # Something heals something
+    "HURT": [[Creature, Player], int],          # Something does damage to something
+    "DRAW": [Player, Card],                     # Somebody draws a card. Drawing many cards is done by repeating this.
+    "ATTACK": [Creature, Creature],             # Something attacks something
+    "DEFEND": [Creature, Creature],             # Something is attacked by something
+    "END_OF_TURN": [Player],                    # Somebodys turn ends
+    "START_OF_TURN": [Player],                  # Somebodys turn starts
+    "ZONE_CHANGE": [GameObject, str],           # Something is moved to a different zone (dying is just moving from the battlefield to the grave.)
+    "PLAY": [Player, Card],                     # Someone played some card
+    "USE": [Ability, Permanent],                # Some ability on some permanent was used
+    "TARGET": [GameObject, [Card, Ability]]     # Some gameobject was targeted by some card or ability 
+                                                # DISCUSS
+                                                # I'd imagine this asks for discussion. I vision targeting happening mid-resolution.
+                                                # And if something reacts to being targeted, it will be processed before the resolution is continued.
 }
 
 
