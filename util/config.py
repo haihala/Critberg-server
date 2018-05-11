@@ -2,14 +2,16 @@
 Main configuration file
 """
 
-Resources = [
+STARTING_HEALTH = 100
+
+RESOURCES = [
     'Apple',
     'Orange',
     'Pear',
     'Grape'
 ]
 
-Rarities = [
+RARITIES = [
     'Common',
     'Rare',
     'Epic',
