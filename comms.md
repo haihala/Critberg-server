@@ -6,6 +6,8 @@ Everything in here may work today, but not tomorrow. This is more of a guideline
 
 Nothing is also guaranteed to work, so when encountering issues while writing a client, chances are that the server is broken.
 
+Anything not surrounded with double asterisks is literal. Everything surrounded by asterisks is supposed to not be
+
 ## In
 
 ### Generic
@@ -17,7 +19,7 @@ Identify is a packet the server requests upon joining. Basically, it tells the s
 ```json
 {
     "type": "identify",
-    "name": <string name you wish to be called>
+    "name": "**string name you wish to be called**"
 }
 ```
 
@@ -28,7 +30,7 @@ A packet that makes the server add the user to the matchmaking queue.
 ```json
 {
     "type": "queue",
-    "deck": <the deck of the user as a list of card IDs>
+    "deck": "**the deck of the user as a list of card IDs**"
 }
 ```
 
@@ -39,8 +41,8 @@ Message packets are in client instant messages between clients.
 ```json
 {
     "type": "message",
-    "target": <string name of recipent>,
-    "content": <string content of the message>
+    "target": "**string name of recipent**",
+    "content": "**string content of the message**"
 }
 ```
 
@@ -68,10 +70,9 @@ Targets are chosen on resolution, so this packet doesn't require any other than 
 {
     "type": "game_action",
     "subtype": "use",
-    "instance": <uuid that describes the card the user wants to play or the activity they want to activate>
+    "instance": "**string uuid that describes the card the user wants to play or the activity they want to activate**"
 }
 ```
-
 
 ## Out
 
@@ -84,7 +85,7 @@ Prompt is a packed used by the server to ask for data. For example, it's used to
 ```json
 {
     "type": "prompt",
-    "value": <type of prompt. For example "identify">
+    "value": "**type of prompt. For example 'identify'**"
 }
 ```
 
@@ -95,8 +96,8 @@ When a user disconnects, the server let's everyone know by broadcasting a discon
 ```json
 {
     "type": "disconnect",
-    "name": <string name of disconnected user>,
-    "address": <string address of disconnected user>
+    "name": "**string name of disconnected user**",
+    "address": "**string address of disconnected user**"
 }
 ```
 
