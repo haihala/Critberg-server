@@ -23,6 +23,8 @@ class Instance_engine(object):
         self.player_iterator = cycle(self.players)
         # cycle is an iterator, that has a next operator. Basically, it loops endlessly and seamlessly
         # an iterator cannot tell it's current value, so storing it is probably smart.
+        # player_iterator is EXCLUSIVELY used to keep track of TURN order. priority order is solved with
+        # self.next_from(self.active_player)
         self.active_player = next(self.player_iterator)     # Who has priority
         self.turn_owner = self.active_player                # Whose turn is it when the stack settles
         # With an empty stack, active_player == turn_owner
@@ -94,7 +96,12 @@ class Instance_engine(object):
             else:
                 # If stack is not full, pass priority
                 if self.stack.peek_next()[1].owner == self.active_player:
-                    # Priority lap has passed, resolve top card.    
+                    # Priority lap has passed, resolve top card.
+                    self.rotate_priority()
+                    # Top card is by the active player, meaning it was played when the active player had priority
+                    # Meaning the next player from the active player should be the one to pick up after it's resolved.
+                    # But it should be set before resolution, since that allows for effects that for example skip players
+                    # In the priority cycle.
                     self.resolve()
 
         elif packet["subtype"] == "use":
@@ -124,8 +131,18 @@ class Instance_engine(object):
             else:
                 ID = self.add_gameobject(Trigger("PLAY", target))
 
-
             self.stack.push(ID, self.gameobjects[ID])
+            self.rotate_priority()
+
+    def rotate_priority(self):
+        self.active_player = self.next_from(self.active_player)
+
+    def next_from(self, target):
+        tmp_iter = cycle([player for player in self.players if not player.dead])
+        player = next(tmp_iter)
+        while player is not target:
+            player = next(tmp_iter)
+        return next(tmp_iter)
 
     def send(self, player, packet):
         player.user.socket.send(packet_encode(packet))

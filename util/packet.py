@@ -46,6 +46,8 @@ def packet_encode(packet):
     return dumps(packet).encode("UTF-8")
 
 def packet_decode(data):
+    # TODO
+    # This should validate the packet. Check that it does contain everything required for a packet of it's type
     try:  # Given faulty bytes, loads can fail.
         return loads(data.decode("UTF-8"))
     except JSONDecodeError:
