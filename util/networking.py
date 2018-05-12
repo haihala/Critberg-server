@@ -3,6 +3,7 @@ Abstraction of the networking. Used to parse packages to usable format, etcetera
 
 """
 
+from .errors import NAME_IN_USE_ERROR
 from .packet import packet_decode, packet_encode, new_user_packet, identify_response
 from .user import User
 
@@ -58,7 +59,6 @@ class Network(object):
                             if packet["name"] not in [i.name for i in self._inbox]:
                                 # User with that name doesn't exist.
                                 self.add_user((sock, self.unverified[sock][1]), packet["name"])
-                                deletable = True
                                 # Might not work, because of references, but hope it does
                             else:
                                 sock.send(NAME_IN_USE_ERROR)

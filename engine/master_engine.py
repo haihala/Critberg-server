@@ -35,7 +35,7 @@ class Master_engine(object):
                         disconnected.append(user)
                     elif message["type"] == "queue":
                         self.queue.append((user, message["deck"]))
-                        # at some point, verify deck.
+                        # TODO at this point, verify deck.
                     elif message["type"] == "game_action":
                         if user in self.instances:
                             if user is self.instances[user].active_player:
