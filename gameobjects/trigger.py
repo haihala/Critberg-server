@@ -1,11 +1,6 @@
 """
 Trigger is a description of a state of an event in the game..
 
-Types for fields:
-used_abilities: list of abilities that have already activated on this specific trigger
-type: string key from TRIGGER_TYPES
-type_params: list of gameobjects that should match the accepted parameters in TRIGGER_TYPES
-
 """
 
 from .ability import Ability
@@ -38,6 +33,13 @@ TRIGGER_TYPES: {
 
 
 class Trigger(GameObject):
+    """
+    Fields:
+    used_abilities: list of abilities that have already activated on this specific trigger
+    type: string key from TRIGGER_TYPES
+    type_params: list of gameobjects that should match the accepted parameters in TRIGGER_TYPES
+    """
+
     def __init__(self, trigger_type, type_params):
         super(Trigger, self).__init__()
         self.used_abilities = []

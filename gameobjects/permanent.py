@@ -8,4 +8,3 @@ from .card import Card
 class Permanent(Card):
     def __init__(self):
         super(self)
-        self.zone = ''

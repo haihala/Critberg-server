@@ -1,20 +1,27 @@
 """
 Ability is an abstract class. Cards may have abilities (triggered or activated).
 
-Types for fields:
-ability: string (code)
-max_activations: int
 """
 
 from .gameobject import GameObject
 
 
 class Ability(GameObject):
+    """    
+    Fields:
+    ability: string (code)
+    speed: int. Casting speed
+    max_activations: int of times it can be used per turn
+    activations: int of times this has been used this turn
+    parent: Gameobject his is attached to
+    usable_zones: list of elements from the util.zone enum
+    """
     def __init__(self):
         super(Ability, self).__init__()
         self.ability = None
         self.speed = None
-        self.max_activations = None     # Per turn
-        self.activations = 0
-        self.parent = None              # Permanent this is attatched to
-        self.usable_zones = []          # Zones this can be used in
+        self.max_activations = None
+        self.parent = None
+        self.usable_zones = []
+
+        self.activations = 0                # This can default to 0 because it isn't a constant property

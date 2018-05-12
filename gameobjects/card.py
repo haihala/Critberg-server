@@ -8,27 +8,31 @@ from .gameobject import GameObject
 
 from util.config import RESOURCES
 
-from enum import Enum, auto
-
-class Zone(Enum):
-    # DISCUSS IMO cards should handle both offense and defense zones as battlefield
-    BATTLEFIELD = auto()
-    HAND = auto()
-    GRAVEYARD = auto()
-    LIBRARY = auto()
-
-
 class Card(GameObject):
+    """
+    Fields:
+    cost: dictionary of resource costs
+    fuel: dictionary of resources provided each turn when in resource mode.
+    speed: int. Casting speed
+    zone:  util.zone where this card currently resides in
+    art: path where the art this card uses is found.
+    # DISCUSS ^
+    triggered: list of triggered abilities this card has.
+    activated: list of activated abilities this card has.
+    """
+
     def __init__(self):
         super(self)
         self.cost = {i: 0 for i in RESOURCES}   # Example Type Costs
         self.fuel = {i: 0 for i in RESOURCES}   # Example Type Generated when used as mana
-        self.color = 0                          # DISCUSS? Indicated Color (Type? Tribe? whatever)
-        self.rarity = 0                         # [Common, Rare, Epic, Legendary] ? More unique names like Mythical?
-        self.speed = 0
+#        self.color = 0                         # DISCUSS? Indicated Color (Type? Tribe? whatever)
+                                                # This doesn't make sense to me
+#        self.rarity = None                     # [Common, Rare, Epic, Legendary] ? More unique names like Mythical?
+                                                # Too early to think about this IMO easy to implement later anyways
+        self.speed = None
         self.zone = None
 
-        self.image = None
+        self.art = None
 
         self.triggered = []
         self.activated = []

@@ -12,13 +12,16 @@ Mostly used to define targetings and whatnot. Gameobjects have a hiararchy that 
             * Creature
         * Spell
 
-Types for fields:
-name: string
-owner: Gameobject
 
 """
 
 class GameObject(object):
+    """
+    Fields:
+    name: string name of this gameobject
+    owner: Player that owns this gameobject
+    """
+
     def __init__(self):
         self.name = None
         self.owner = None

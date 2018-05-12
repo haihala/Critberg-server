@@ -8,7 +8,18 @@ from util.config import RESOURCES, STARTING_HEALTH
 
 class Player(GameObject):
     """
-    Adding basic player attributes regarding health, hand and manapool
+    Fields:
+    resource: amount of resources this player has available.
+    health: health this player has
+    dead: bool telling the server has the player died. dead players are valid targets, but cannot act themselves.
+    hand: list of Cards this player has in their hand.
+    deck: list of Cards this player has in their deck.
+    library: list of Cards this player has in their library.
+    attack: list of Cards this player has in their attack field.
+    defense: list of Cards this player has in their defense field.
+    graveyard: list of Cards this player has in their graveyard.
+    exile: list of Cards this player has exiled.
+    user: User that controls this player.
     """
     def __init__(self, user):
         super(Player, self).__init__()
