@@ -108,8 +108,8 @@ Message packets are in client instant messages between clients.
 ```json
 {
     "type": "message",
-    "sender": <string name of sender>,
-    "content": <string content of the message>
+    "sender": "**string name of sender**",
+    "content": "**string content of the message**"
 }
 ```
 
