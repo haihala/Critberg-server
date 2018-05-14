@@ -5,6 +5,7 @@ Represents the players of the game.
 
 from .gameobject import GameObject
 from util.config import RESOURCES, STARTING_HEALTH
+from util.packet import packet_encode
 
 class Player(GameObject):
     """
@@ -40,3 +41,6 @@ class Player(GameObject):
     def can_afford(self, card):
         # TODO
         return True
+
+    def send(self, packet):
+        self.user.socket.send(packet_encode(packet))

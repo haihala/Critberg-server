@@ -20,8 +20,10 @@ class GameObject(object):
     Fields:
     name: string name of this gameobject
     owner: Player that owns this gameobject
+    uuid: UUID this instance has this gameobject stored in.
     """
 
     def __init__(self):
         self.name = None
         self.owner = None
+        self.uuid = None

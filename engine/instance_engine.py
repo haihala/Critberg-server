@@ -10,11 +10,12 @@ from gameobjects.ability import Ability
 from gameobjects.player import Player
 from gameobjects.trigger import Trigger
 from util.errors import NOT_FAST_ENOUGH_ERROR, NOT_ENOUGH_RESOURCES_ERROR, INVALID_ZONE_ERROR, ACTIVATIONS_USED_ERROR
+from util.instance_packet import *
 from util.packet import packet_encode
 
 from copy import deepcopy
 from itertools import cycle
-from random import choice
+from random import shuffle
 from uuid import UUID
 
 class Instance_engine(object):
@@ -29,8 +30,6 @@ class Instance_engine(object):
         self.turn_owner = self.active_player                # Whose turn is it when the stack settles
         # With an empty stack, active_player == turn_owner
 
-        # Announce who is going first and what is the order of play
-        
         self.over = False
         self.winner = None
 
@@ -40,19 +39,43 @@ class Instance_engine(object):
         self.gameobjects = {}
         for player in self.players:
             self.add_gameobject(player)
-            for card in [lookup(i, j) for i, j in player.user.deck]:
+            player.deck = [lookup(i, j) for i, j in player.user.deck]
+            for card in player.deck:
                 self.add_gameobject(card)
                 for triggered in card.trigger:
                     self.add_gameobject(triggered)
                 for activated in card.activated:
                     self.add_gameobject(activated)
-                
+
+        # Announce who is going first and what is the order of play
+        self.broadcast(game_start_packet(
+            [
+                [
+                    player.uuid, player.name,
+                    [
+                        card.uuid
+                        for card in player.deck
+                    ]
+                ]
+                for player in self.players
+            ]
+        ))
+
+        for player in self.players:
+            # Tell each player what does their deck contain.
+            self.active_player.send(card_reveal_packet(
+                [
+                    [card.uuid, card.id]
+                    for card in player.deck
+                ], True
+            ))
+            shuffle(player.deck)
+        # At this point, each player knows the uuid for everything and the cards within their deck but not the order.
 
     def add_gameobject(self, obj):
-        # Init could just use this line, but adding gameobjects later (tokens etc)
-        # is easier with a separate method
         ID = UUID()
-        self.gameobjects[ID] = deepcopy(obj)        # DISCUSS: Maybe don't deepcopy
+        self.gameobjects[ID] = obj
+        self.gameobjects[ID].uuid = ID
         return ID
 
     def tick(self, packet):
@@ -61,20 +84,7 @@ class Instance_engine(object):
         self.handle_action(packet)
 
         # 2. check for win-states (check if a player is dead)
-        for player in self.players:
-            if player.health <= 0:
-                player.dead = True
-                # Inform the player of their death.
-
-        if all(player.dead for player in self.players):
-            self.over = True
-            # Inform the players that it's a draw.
-
-        players_alive = [player for player in self.players if not player.dead]
-        if len(players_alive) == 1:
-            self.over = True
-            self.winner = players_alive[0]
-            # Inform the winner that they have indeed won.
+        self.death_check()
 
     def resolve(self):
         # Resolves the top thing in the stack.
@@ -87,55 +97,62 @@ class Instance_engine(object):
         pass
 
     def handle_action(self, packet):
-        # Returns triggers caused by this action
         if packet["subtype"] == "pass":
             if self.stack.empty():
                 # If stack is empty, pass the turn
                 self.turn_owner = next(self.player_iterator)
+
+                # Skip dead players
+                while self.turn_owner.dead:
+                    self.turn_owner = next(self.player_iterator)
+
                 self.active_player = self.turn_owner
+                self.broadcast(turn_start_packet(self.turn_owner))
             else:
                 # If stack is not full, pass priority
                 if self.stack.peek_next()[1].owner == self.active_player:
                     # Priority lap has passed, resolve top card.
-                    self.rotate_priority()
-                    # Top card is by the active player, meaning it was played when the active player had priority
-                    # Meaning the next player from the active player should be the one to pick up after it's resolved.
-                    # But it should be set before resolution, since that allows for effects that for example skip players
-                    # In the priority cycle.
                     self.resolve()
+                self.rotate_priority()
+                # Top card was by the active player, meaning it was played when the active player had priority
+                # Meaning the next player from the active player should be the one to pick up after it's resolved.
 
         elif packet["subtype"] == "use":
             # User attempts to use an ability or play a card.
             target = self.gameobjects[packet["instance"]]
             if target.speed < self.stack.peek_next()[1].speed:
-                self.send(self.active_player, NOT_FAST_ENOUGH_ERROR)
+                self.active_player.send(NOT_FAST_ENOUGH_ERROR)
                 return
 
             if self.active_player.can_afford(target.cost):
-                self.send(self.active_player, NOT_ENOUGH_RESOURCES_ERROR)
+                self.active_player.send(NOT_ENOUGH_RESOURCES_ERROR)
                 return
 
-            # All clear.
-            # Add the card played trigger or the ability used trigger to the stack after the card.
-            self.stack.push(packet["instance"], target)
             if isinstance(target, Ability):
                 if target.parent.zone not in target.usable_zones:
-                    self.send(self.active_player, INVALID_ZONE_ERROR)
+                    self.active_player.send(INVALID_ZONE_ERROR)
                     return
 
                 if target.max_activations <= target.activations:
-                    self.send(self.active_player, ACTIVATIONS_USED_ERROR)
+                    self.active_player.send(ACTIVATIONS_USED_ERROR)
                     return
 
-                ID = self.add_gameobject(Trigger("USE", target))
+                trigger_type = "USE"
             else:
-                ID = self.add_gameobject(Trigger("PLAY", target))
+                trigger_type = "USE"
 
-            self.stack.push(ID, self.gameobjects[ID])
+            # Add the card/ability to stack.
+            self.stack.push(packet["instance"], target)
+            self.broadcast(stack_add_action_packet(packet["instance"]))
+
+            # Add the trigger to stack
+            self.trigger_add(trigger_type, target)
+
             self.rotate_priority()
 
     def rotate_priority(self):
         self.active_player = self.next_from(self.active_player)
+        self.broadcast(priority_shift_packet(self.active_player))
 
     def next_from(self, target):
         tmp_iter = cycle([player for player in self.players if not player.dead])
@@ -144,10 +161,29 @@ class Instance_engine(object):
             player = next(tmp_iter)
         return next(tmp_iter)
 
-    def send(self, player, packet):
-        player.user.socket.send(packet_encode(packet))
-
     def broadcast(self, packet, blacklist = []):
         # Send a message to everyone in this instance
         for player in [i for i in self.players if i not in blacklist]:
-            self.send(player, packet)
+            player.send(packet)
+
+    def trigger_add(self, trigger_type, trigger_params):
+        ID = self.add_gameobject(Trigger(trigger_type, trigger_params))
+        self.stack.push(ID, self.gameobjects[ID])
+        self.broadcast(stack_add_trigger_packet(ID, trigger_type, trigger_params))
+
+    def death_check(self):
+        for player in self.players:
+            if player.health <= 0:
+                player.dead = True
+                self.broadcast(lose_packet(player.uuid))
+
+
+        if all(player.dead for player in self.players):
+            self.over = True
+            self.broadcast(tie_packet())
+
+        players_alive = [player for player in self.players if not player.dead]
+        if len(players_alive) == 1:
+            self.over = True
+            self.winner = players_alive[0]
+            self.broadcast(win_packet(self.winner.uuid))

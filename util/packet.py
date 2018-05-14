@@ -27,6 +27,13 @@ def identify_prompt():
         "value": "identify"
     }
 
+def connect_packet(name):
+    return {
+        "type": "connect",
+        "name": name                # It's crucial to not give sockets or addressess to the clients
+                                    # See "skype ddos" for context
+    }
+
 def disconnect_packet(name, addr):
     return {
         "type": "disconnect",

@@ -7,7 +7,7 @@ from .instance_engine import Instance_engine
 
 from util.user import User
 from util.errors import NOT_ACTIVE_PLAYER_ERROR
-from util.packet import identify_prompt, message_packet, disconnect_packet
+from util.packet import identify_prompt, message_packet, connect_packet, disconnect_packet
 
 
 class Master_engine(object):
@@ -27,7 +27,7 @@ class Master_engine(object):
                 elif generic["type"] == "identify":
                     self.users.append(User(generic["name"], (generic["socket"], generic["address"])))
                     self.network_handle.add_user(self.users[-1])
-                    self.network_handle.broadcast()
+                    self.network_handle.broadcast(connect_packet(generic["name"]))
 
             disconnected = []
 
@@ -59,7 +59,8 @@ class Master_engine(object):
                 if game.over:
                     for player in game.players:
                         del self.instances[player]
-                        # Should work, could have issues with elements being removed mid-iteration
+                        # TODO record stats.
+                        # For card/player/deck winrates
 
     def start_instance(self, players):
         new_instance = Instance_engine(players)

@@ -115,8 +115,128 @@ Message packets are in client instant messages between clients.
 
 ### Game
 
-\# TODO (kirjoitan noin koska silloin ctrl-shift-f löytää)
+Like incoming packets with the type `game_action`, all of the game relevant packets the server sends out have the type `game_update` and their subtype is what determines more accurately what happened.
 
+#### Start
+
+This is sent when the game starts. This packet tells the players who are they playing against and the uuids that the server will reference later.
+
+```json
+{
+    "type": "game_update",
+    "subtype": "start",
+    "players": [
+        // a list of player objects serialized as the following:
+        [
+            "**string uuid of player**",
+            "**string name of player**",
+            "**list string uuids of cards in this player's deck.**"
+        ]
+    ]
+}
+```
+
+#### Reveal
+
+It's assumed that each player knows the uuid of everything always, but doesn't know what everything is. Think of this as revealing that the card with a certain uuid is a certain type of card.
+
+```json
+{
+    "type": "game_update",
+    "subtype": "reveal",
+    "multiple": "**boolean. If true 'cards' is a list of uuid-cardID pairs. If false. 'cards' is a single uuid-cardID pair**",
+    "cards": "**either a single uuid-cardID pair, or a list of pairs. Each pair is linked. **"
+}
+```
+
+#### Stack add action
+
+Some action (either a card or an ability) was just added to the stack.
+
+```json
+{
+    "type": "game_update",
+    "subtype": "stack_add_action",
+    "uuid": "**string uuid of the action that was placed on stack.**"
+}
+```
+
+#### Stack add trigger
+
+Some trigger was just added to the stack. Happens for example when something was healed. In this case `trigger_type` would be `HEAL` and trigger_params an uuid of the thing healed.
+
+```json
+{
+    "type": "game_update",
+    "subtype": "stack_add_trigger",
+    "uuid": "**string uuid of trigger (for targeting)**",
+    "trigger_type": "**string type of trigger. For example 'HEAL' when something was healed.**",
+    "trigger_params": "**parameters for that specific kind of trigger. Type dependent on trigger_type**"
+}
+```
+
+Trigger types and the corresponding `trigger_params`:
+
+* HEAL - string uuid of healed gameobject
+\# TODO
+
+#### Turn start
+
+Player's turn has started. This is broadcasted to everyone, so checking the `player` field is mandatory.
+
+```json
+{
+    "type": "game_update",
+    "subtype": "turn_start",
+    "player": "**string uuid of the player whose turn is about to start**"
+}
+```
+
+#### Priority_shift
+
+This is a packet telling each client who has priority.
+
+```json
+{
+    "type": "game_update",
+    "subtype": "priority_shift",
+    "player": "**uuid of the player who is up**"
+}
+```
+
+#### Defeat
+
+A player has died.
+
+```json
+{
+    "type": "game_update",
+    "subtype": "defeat",
+    "player": "**uuid of the player who lost**"
+}
+```
+#### Tie
+
+All players have died.
+
+```json
+{
+    "type": "game_update",
+    "subtype": "tie"
+}
+```
+
+#### Victory
+
+All players except for one have died. This one player is declared the winner.
+
+```json
+{
+    "type": "game_update",
+    "subtype": "victory",
+    "player": "**uuid of the player who won**"
+}
+```
 ### Errors
 
 Each error has the type `error` and both a short one word explanation and a longer one sentence explanation of what went wrong.
