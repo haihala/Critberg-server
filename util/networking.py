@@ -58,8 +58,8 @@ class Network(object):
                         if packet["type"] == "identify":
                             if packet["name"] not in [i.name for i in self._inbox]:
                                 # User with that name doesn't exist.
-                                self.add_user((sock, self.unverified[sock][1]), packet["name"])
-                                # Might not work, because of references, but hope it does
+                                self._generic_inbox.append(identify_response(packet["name"], *(sock, self.unverified[sock][0])))
+                                self.unverified[sock][1] = True
                             else:
                                 sock.send(NAME_IN_USE_ERROR)
 
@@ -89,12 +89,9 @@ class Network(object):
         return packet_decode(data)
         # Packet field existance is checked in packet_parse
 
-    def add_user(self, network_handle, name):
+    def add_user(self, user):
         # Called from main engine. Before this, a generic is raised to ask for a name.
-        new_user = User(name, network_handle)
-        self._generic_inbox.append(identify_response(name, *network_handle))
-        self._inbox[new_user] = []
-        self.broadcast((message_packet(name, 'has joined')))
+        self._inbox[user] = []
 
     def get_unreads(self, user):
         unread = self._inbox[user][:]
