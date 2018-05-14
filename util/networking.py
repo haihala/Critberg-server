@@ -4,7 +4,7 @@ Abstraction of the networking. Used to parse packages to usable format, etcetera
 """
 
 from .errors import NAME_IN_USE_ERROR
-from .packet import packet_decode, packet_encode, new_user_packet, identify_response
+from .packet import packet_decode, packet_encode, new_user_packet, identify_response, message_packet
 from .user import User
 
 from select import select
@@ -94,6 +94,7 @@ class Network(object):
         new_user = User(name, network_handle)
         self._generic_inbox.append(identify_response(name, *network_handle))
         self._inbox[new_user] = []
+        self.broadcast((message_packet(name, 'has joined')))
 
     def get_unreads(self, user):
         unread = self._inbox[user][:]
@@ -109,7 +110,7 @@ class Network(object):
         user.socket.send(packet_encode(packet))
 
     def reply(self, original, reply):
-        original["socket"].send(reply)
+        original["socket"].send(packet_encode(reply))
 
     def broadcast(self, packet):
         for user in self._inbox:

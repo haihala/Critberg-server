@@ -22,24 +22,24 @@ def identify_response(name, sock, addr):
     }
 # Outgoing
 def identify_prompt():
-    return packet_encode({
+    return {
         "type": "prompt",
         "value": "identify"
-    })
+    }
 
 def disconnect_packet(name, addr):
-    return packet_encode({
+    return {
         "type": "disconnect",
         "name": name,
         "address": addr
-    })
+    }
 
 def message_packet(sender, content):
-    return packet_encode({
+    return {
         "type": "message",
         "sender": sender,
         "content": content
-    })
+    }
 
 
 def packet_encode(packet):

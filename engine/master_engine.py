@@ -24,11 +24,12 @@ class Master_engine(object):
                     self.network_handle.reply(generic, identify_prompt())
 
             disconnected = []
-
+            self.users = [i for i in self.network_handle._inbox];
+            
             for user in self.users:
                 for message in self.network_handle.get_unreads(user):
                     if message["type"] == "message":
-                        self.network_handle.send(self.user_called(message["target"]), message_packet(user, message["content"]))
+                        self.network_handle.send(self.user_called(message["target"]), message_packet(user.name, message["content"]))
                     elif message["type"] == "disconnect":
                         self.network_handle.broadcast(disconnect_packet(user.name, user.address))
                         self.network_handle.disconnect(user)
