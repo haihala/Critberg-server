@@ -87,14 +87,31 @@ class Instance_engine(object):
         self.death_check()
 
     def resolve(self):
-        # Resolves the top thing in the stack.
-        # This is the most of the work
-        # Todo
-        # Sketch:
         # 1. Pop the top of the stack.
+        uuid, effect = self.stack.pop()
+
         # 2. Deal with that
-        # 3. If the resolvee was a trigger, delete from gameobjects
-        pass
+        if isinstance(effect, Trigger):
+            # Trigger
+            # TODO DISCUSS PRIORITY REWORK THIS
+            # See https://docs.google.com/document/d/1FTYprrnAfiAXwuQqXbg7zs7GplVs_2IB2-B0bjd4S0Q/edit?usp=sharing for context
+            reacters = self.reacters(effect.trigger_type, effect.trigger_params)
+            reacters = sorted(reacters, lambda x: x.speed, True)
+            for reacter in reacters:
+                self.stack.push(reacter, self.gameobjects[reacter])
+            # Delete used trigger
+            del self.gameobjects[uuid]
+        else:
+            # Non-trigger
+            self.resolve_effect(effect)
+
+
+    def resolve_effect(self, effect):
+        # Resolve the effect
+        triggers, self = effect.ability(self)
+        # Add triggers to stack
+        for trigger in triggers:
+            self.stack.push(trigger, self.gameobjects[trigger])
 
     def handle_action(self, packet):
         if packet["subtype"] == "pass":
@@ -108,6 +125,11 @@ class Instance_engine(object):
 
                 self.active_player = self.turn_owner
                 self.broadcast(turn_start_packet(self.turn_owner))
+
+                # DISCUSS, should ability activations have a certain amount per turn or per own turn.
+                # Should the ability.activations reset each turn swap or only when the controllers turn starts
+                for ability in [i for i in self.gameobjects if isinstance(i, Ability)]:
+                    ability.activations = 0
             else:
                 # If stack is not full, pass priority
                 if self.stack.peek_next()[1].owner == self.active_player:
@@ -138,6 +160,8 @@ class Instance_engine(object):
                     return
 
                 trigger_type = "USE"
+                if target.max_activations:
+                    target.activations += 1
             else:
                 trigger_type = "USE"
 
@@ -187,3 +211,6 @@ class Instance_engine(object):
             self.over = True
             self.winner = players_alive[0]
             self.broadcast(win_packet(self.winner.uuid))
+
+    def reacters(self, trigger_type, trigger_params):
+        return []
