@@ -23,7 +23,7 @@ class Player(GameObject):
     user: User that controls this player.
     """
     def __init__(self, user):
-        super(Player, self).__init__()
+        GameObject.__init__(self)
 
         self.resource = {i: 0 for i in RESOURCES}
         self.health = STARTING_HEALTH

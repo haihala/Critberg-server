@@ -22,7 +22,7 @@ class Card(GameObject):
     """
 
     def __init__(self):
-        super(self)
+        GameObject.__init__(self)
         self.cost = {i: 0 for i in RESOURCES}   # Example Type Costs
         self.fuel = {i: 0 for i in RESOURCES}   # Example Type Generated when used as mana
 #        self.color = 0                         # DISCUSS? Indicated Color (Type? Tribe? whatever)

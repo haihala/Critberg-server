@@ -41,7 +41,7 @@ class Trigger(GameObject):
     """
 
     def __init__(self, trigger_type, type_params):
-        super(Trigger, self).__init__()
+        GameObject.__init__(self)
         self.used_abilities = []
         # List of uuids of things that have already been in the stack because of this specific trigger.
         # Note, not this kind of trigger.

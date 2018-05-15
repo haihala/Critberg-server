@@ -7,12 +7,28 @@ from .permanent import Permanent
 
 class Creature(Permanent):
     """
-    Field:
+    Fields:
     health: int. Number of damage this can take before dying.
     attack: int. Number of damage this does per attack.
     """
 
-    def __init__(self):
-        super(self)
-        self.health = 0
-        self.attack = 0
+    def __init__(   self,
+                    name,
+                    cost,
+                    fuel,
+                    health,
+                    attack,
+                    speed = 0,
+                    triggered_abilities = [],
+                    activated_abilities = []
+                    ):
+        Permanent.__init__( self,
+                            name,
+                            cost,
+                            fuel,
+                            speed,
+                            triggered_abilities,
+                            activated_abilities
+                            )
+        self.health = health
+        self.attack = attack
