@@ -9,6 +9,7 @@ from .stack import Stack
 from gameobjects.ability import Ability
 from gameobjects.player import Player
 from gameobjects.trigger import Trigger
+from gameobjects.triggered_ability import Triggered_ability
 from util.errors import NOT_FAST_ENOUGH_ERROR, NOT_ENOUGH_RESOURCES_ERROR, INVALID_ZONE_ERROR, ACTIVATIONS_USED_ERROR
 from util.instance_packet import *
 from util.packet import packet_encode
@@ -213,4 +214,7 @@ class Instance_engine(object):
             self.broadcast(win_packet(self.winner.uuid))
 
     def reacters(self, trigger_type, trigger_params):
-        return []
+        return [i for i in self.triggered_abilities() if i.trigger_type == trigger_type and i.constraints(trigger_params)]
+
+    def triggered_abilities(self):
+        return [j for i, j in self.gameobjects if isinstance(j, Triggered_ability)]

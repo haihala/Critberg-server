@@ -23,7 +23,7 @@ TRIGGER_TYPES: {
     "ZONE_CHANGE": [GameObject, str],           # Something is moved to a different zone (dying is just moving from the battlefield to the grave.)
     "PLAY": [Player, Card],                     # Someone played some card
     "USE": [Ability, Permanent],                # Some ability on some permanent was used
-    "TARGET": [GameObject, [Card, Ability]]     # Some gameobject was targeted by some card or ability 
+    "TARGET": [GameObject, [Card, Ability]]     # Some gameobject was targeted by some card or ability
                                                 # DISCUSS
                                                 # I'd imagine this asks for discussion. I vision targeting happening mid-resolution.
                                                 # And if something reacts to being targeted, it will be processed before the resolution is continued.
@@ -46,6 +46,9 @@ class Trigger(GameObject):
         # List of uuids of things that have already been in the stack because of this specific trigger.
         # Note, not this kind of trigger.
         self.type = trigger_type
+
+        if type(type_params) is not list:
+            type_params = [type_params]
         self.type_params = type_params
 
 
