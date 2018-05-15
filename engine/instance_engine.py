@@ -214,7 +214,7 @@ class Instance_engine(object):
             self.broadcast(win_packet(self.winner.uuid))
 
     def reacters(self, trigger_type, trigger_params):
-        return [i for i in self.triggered_abilities() if i.trigger_type == trigger_type and i.constraints(trigger_params)]
+        return [i for i in self.triggered_abilities() if i.trigger_type == trigger_type and i.constraint(trigger_params, i)]
 
     def triggered_abilities(self):
         return [j for i, j in self.gameobjects if isinstance(j, Triggered_ability)]
