@@ -5,4 +5,6 @@ from .card import Card
 from .executable import Executable
 
 class Spell(Card, Executable):
-    pass
+    def __init__(self):
+        Card.__init__(self)
+        Executable.__init__(self)
