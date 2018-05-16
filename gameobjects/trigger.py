@@ -22,7 +22,6 @@ TRIGGER_TYPES: {
     "DEFEND": [Creature, Creature],             # Something is attacked by something
     "END_OF_TURN": [Player],                    # Somebodys turn ends
     "START_OF_TURN": [Player],                  # Somebodys turn starts
-    "ZONE_CHANGE": [GameObject, str],           # Something is moved to a different zone (dying is just moving from the battlefield to the grave.)
     "PLAY": [Player, Card],                     # Someone played some card
     "USE": [Ability, Permanent],                # Some ability on some permanent was used
     "ENTER": [Card, Zone],                      # Something enters zone
@@ -36,7 +35,7 @@ TRIGGER_TYPES: {
 
 
 
-class Trigger(GameObject):
+class Trigger():
     """
     Fields:
     used_abilities: list of abilities that have already activated on this specific trigger
@@ -45,7 +44,6 @@ class Trigger(GameObject):
     """
 
     def __init__(self, trigger_type, type_params):
-        GameObject.__init__(self)
         self.used_abilities = []
         # List of uuids of things that have already been in the stack because of this specific trigger.
         # Note, not this kind of trigger.
