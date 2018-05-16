@@ -19,6 +19,12 @@ from itertools import cycle
 from random import shuffle
 from uuid import UUID
 
+def order():
+    i = 0
+    while True:
+        yield i
+        i += 1
+
 class Instance_engine(object):
     def __init__(self, users):
         self.players = [Player(user) for user in users]
@@ -42,10 +48,13 @@ class Instance_engine(object):
             self.add_gameobject(player)
             player.deck = [lookup(i, j) for i, j in player.user.deck]
             for card in player.deck:
+                card.order = order()
                 self.add_gameobject(card)
                 for triggered in card.trigger:
+                    triggered.order = order()
                     self.add_gameobject(triggered)
                 for activated in card.activated:
+                    activated.order = order()
                     self.add_gameobject(activated)
 
         # Announce who is going first and what is the order of play
@@ -93,13 +102,7 @@ class Instance_engine(object):
 
         # 2. Deal with that
         if isinstance(effect, Trigger):
-            # Trigger
-            # TODO DISCUSS PRIORITY REWORK THIS
-            # See https://docs.google.com/document/d/1FTYprrnAfiAXwuQqXbg7zs7GplVs_2IB2-B0bjd4S0Q/edit?usp=sharing for context
-            reacters = self.reacters(effect.trigger_type, effect.trigger_params)
-            reacters = sorted(reacters, lambda x: x.speed, True)
-            for reacter in reacters:
-                self.stack.push(reacter, self.gameobjects[reacter])
+            self.react(effect)
             # Delete used trigger
             del self.gameobjects[uuid]
         else:
@@ -112,7 +115,7 @@ class Instance_engine(object):
         triggers, self = effect.ability(self)
         # Add triggers to stack
         for trigger in triggers:
-            self.stack.push(trigger, self.gameobjects[trigger])
+            self.react(trigger)
 
     def handle_action(self, packet):
         if packet["subtype"] == "pass":
@@ -167,11 +170,11 @@ class Instance_engine(object):
                 trigger_type = "USE"
 
             # Add the card/ability to stack.
-            self.stack.push(packet["instance"], target)
+            self.stack.push(target)
             self.broadcast(stack_add_action_packet(packet["instance"]))
 
             # Add the trigger to stack
-            self.trigger_add(trigger_type, target)
+            self.react(Trigger(trigger_type, target))
 
             self.rotate_priority()
 
@@ -191,11 +194,6 @@ class Instance_engine(object):
         for player in [i for i in self.players if i not in blacklist]:
             player.send(packet)
 
-    def trigger_add(self, trigger_type, trigger_params):
-        ID = self.add_gameobject(Trigger(trigger_type, trigger_params))
-        self.stack.push(ID, self.gameobjects[ID])
-        self.broadcast(stack_add_trigger_packet(ID, trigger_type, trigger_params))
-
     def death_check(self):
         for player in self.players:
             if player.health <= 0:
@@ -213,8 +211,19 @@ class Instance_engine(object):
             self.winner = players_alive[0]
             self.broadcast(win_packet(self.winner.uuid))
 
-    def reacters(self, trigger_type, trigger_params):
-        return [i for i in self.triggered_abilities() if i.trigger_type == trigger_type and i.constraint(trigger_params, i)]
+    def react(self, trigger):
+        trigger_type, trigger_params = trigger.trigger_type, trigger.trigger_params
+        reacters =  [i for i in self.triggered_abilities() if i.trigger_type == trigger_type and i.constraint(trigger_params, i)]
+        reacters = sorted(reacters, lambda x: x.order)
+        reacters = sorted(reacters, lambda x: x.speed)
+        for reacter in reacters:
+            self.stack.push(reacter)
 
     def triggered_abilities(self):
         return [j for i, j in self.gameobjects if isinstance(j, Triggered_ability)]
+
+    def change_zone(self, mover, destination):
+        self.react(Trigger("EXIT", [mover, mover.zone]))
+        mover.order = order()
+        mover.zone = destination
+        self.react(Trigger("ENTER", [mover, mover.zone]))

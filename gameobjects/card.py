@@ -30,6 +30,7 @@ class Card(GameObject):
 #        self.rarity = None                     # [Common, Rare, Epic, Legendary] ? More unique names like Mythical?
                                                 # Too early to think about this IMO easy to implement later anyways
         self.speed = None
+        self.order = None
         self.zone = None
 
         self.art = None

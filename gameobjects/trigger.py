@@ -10,6 +10,8 @@ from .gameobject import GameObject
 from .permanent import Permanent
 from .player import Player
 
+from util.zone import Zone
+
 
 TRIGGER_TYPES: {
     # "Name of trigger": [first_param_type, [Possible, types, of, second, param]]
@@ -23,6 +25,8 @@ TRIGGER_TYPES: {
     "ZONE_CHANGE": [GameObject, str],           # Something is moved to a different zone (dying is just moving from the battlefield to the grave.)
     "PLAY": [Player, Card],                     # Someone played some card
     "USE": [Ability, Permanent],                # Some ability on some permanent was used
+    "ENTER": [Card, Zone],                      # Something enters zone
+    "EXIT": [Card, Zone],                       # Something leaves zone
     "TARGET": [GameObject, [Card, Ability]]     # Some gameobject was targeted by some card or ability
                                                 # DISCUSS
                                                 # I'd imagine this asks for discussion. I vision targeting happening mid-resolution.

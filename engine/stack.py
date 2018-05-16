@@ -15,16 +15,17 @@ class Stack():
     def __init__(self):
         self._stack = OrderedDict()
 
-    def push(self, id, gameobject):
+    def push(self, gameobject):
         # Some user has played a card to append the stack with
+        ID = gameobject.uuid
         if isinstance(gameobject, Triggered_ability):
             # Assume the previous layer is a trigger. If it isn't a trigger, there is a bug elsewhere and this crash is justified.
-            # This section adds the new triggered ability to the triggers list of used abilities. 
+            # This section adds the new triggered ability to the triggers list of used abilities.
             # instance_engine will make sure to not re-trigger the same ability on the same trigger.
             tmp = self._stack.popitem()
-            tmp[1].used_abilities.append(id)
+            tmp[1].used_abilities.append(ID)
             self._stack[tmp[0]] = tmp[1]
-        self._stack[id] = gameobject
+        self._stack[ID] = gameobject
 
     def pop(self):
         # Instance engine is resolving the top card
@@ -48,5 +49,5 @@ class Stack():
 
     def peek_next(self):
         pair = self.pop()
-        self.push(*pair)
+        self.push(pair[1])
         return pair

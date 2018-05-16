@@ -22,6 +22,7 @@ class Ability(GameObject, Executable):
         GameObject.__init__(self)
         Executable.__init__(self)
         self.speed = None
+        self.order = None
         self.max_activations = None
         self.parent = None
         self.usable_zones = []

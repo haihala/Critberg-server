@@ -27,15 +27,6 @@ def stack_add_action_packet(uuid):
         "uuid": uuid
     }
 
-def stack_add_trigger_packet(uuid, trigger_type, trigger_params):
-    return {
-        "type": "game_update",
-        "subtype": "stack_add_trigger",
-        "uuid": uuid,
-        "trigger_type": trigger_type,
-        "trigger_params": trigger_params
-    }
-
 def turn_start_packet(player):
     return {
         "type": "game_update",
