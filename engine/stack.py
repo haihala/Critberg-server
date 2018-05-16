@@ -30,7 +30,7 @@ class Stack():
     def pop(self):
         # Instance engine is resolving the top card
         # Returns a (id, gameobject) -tuple
-        return self._stack.popitem()
+        return self._stack.popitem()[1]
 
     def counter(self, id):
         # Remove the given item from the stack.
@@ -48,6 +48,6 @@ class Stack():
         return not bool(len(self._stack))
 
     def peek_next(self):
-        pair = self.pop()
-        self.push(pair[1])
-        return pair
+        item = self.pop()
+        self.push(item)
+        return item

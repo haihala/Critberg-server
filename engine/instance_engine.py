@@ -98,20 +98,9 @@ class Instance_engine(object):
 
     def resolve(self):
         # 1. Pop the top of the stack.
-        uuid, effect = self.stack.pop()
+        effect = self.stack.pop()
 
         # 2. Deal with that
-        if isinstance(effect, Trigger):
-            self.react(effect)
-            # Delete used trigger
-            del self.gameobjects[uuid]
-        else:
-            # Non-trigger
-            self.resolve_effect(effect)
-
-
-    def resolve_effect(self, effect):
-        # Resolve the effect
         triggers, self = effect.ability(self)
         # Add triggers to stack
         for trigger in triggers:
@@ -136,7 +125,7 @@ class Instance_engine(object):
                     ability.activations = 0
             else:
                 # If stack is not full, pass priority
-                if self.stack.peek_next()[1].owner == self.active_player:
+                if self.stack.peek_next().owner == self.active_player:
                     # Priority lap has passed, resolve top card.
                     self.resolve()
                 self.rotate_priority()
@@ -146,7 +135,7 @@ class Instance_engine(object):
         elif packet["subtype"] == "use":
             # User attempts to use an ability or play a card.
             target = self.gameobjects[packet["instance"]]
-            if target.speed < self.stack.peek_next()[1].speed:
+            if target.speed < self.stack.peek_next().speed:
                 self.active_player.send(NOT_FAST_ENOUGH_ERROR)
                 return
 
