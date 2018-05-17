@@ -5,7 +5,7 @@ This is a module for the decorators used in card text. This transforms python to
 from gameobjects.activated_ability import Activated_ability
 from gameobjects.triggered_ability import Triggered_ability
 
-from util.zone import Zone
+from engine.zone import Zone
 
 def ability(
             target,
@@ -19,7 +19,7 @@ def ability(
     target.max_activations = max_activations
     target.usable_zones = usable_zones
     target.constraint = constraint
-    target.ability = func
+    target.__call__ = func
     return target
 
 def triggered_ability(trigger_type, **kwargs):

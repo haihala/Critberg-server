@@ -8,4 +8,4 @@ class Executable():
     ability: function that takes in the instance and returns a (list of triggers, new instance) -tuple
     """
     def __init__(self):
-        self.ability = callable()
+        self.requirements = []

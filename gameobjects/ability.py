@@ -13,7 +13,7 @@ class Ability(GameObject, Executable):
     max_activations: int of times it can be used per turn
     activations: int of times this has been used this turn
     parent: Gameobject his is attached to
-    usable_zones: list of elements from the util.zone enum
+    usable_zones: list of elements from the engine.zone enum
     constraint: Function.
         For example, "whenever a creature is played: ..." would have the first trigger parameter constricted to creatures.
         constraint is a function that should return true or false when passed the possible target. True if legal, False if illegal.

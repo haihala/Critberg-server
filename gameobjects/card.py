@@ -14,7 +14,7 @@ class Card(GameObject):
     cost: dictionary of resource costs
     fuel: dictionary of resources provided each turn when in resource mode.
     speed: int. Casting speed
-    zone:  util.zone where this card currently resides in
+    zone:  engine.zone where this card currently resides in
     art: path where the art this card uses is found.
     # DISCUSS ^
     triggered: list of triggered abilities this card has.

@@ -5,9 +5,12 @@ Will eventually contain the class used for an interface to manage a singular gam
 
 from .card_lookup import lookup
 from .stack import Stack
+from .zone import Zone
 
 from gameobjects.ability import Ability
+from gameobjects.permanent import Permanent
 from gameobjects.player import Player
+from gameobjects.spell import Spell
 from gameobjects.trigger import Trigger
 from gameobjects.triggered_ability import Triggered_ability
 from util.errors import NOT_FAST_ENOUGH_ERROR, NOT_ENOUGH_RESOURCES_ERROR, INVALID_ZONE_ERROR, ACTIVATIONS_USED_ERROR
@@ -98,13 +101,23 @@ class Instance_engine(object):
 
     def resolve(self):
         # 1. Pop the top of the stack.
-        effect = self.stack.pop()
+        target = self.stack.pop()
 
         # 2. Deal with that
-        triggers, self = effect.ability(self)
-        # Add triggers to stack
-        for trigger in triggers:
-            self.react(trigger)
+        if isinstance(target, Permanent):
+            self.change_zone(target, Zone.BATTLEFIELD)
+        else:
+            # Either an ability or a spell
+            # Resolve the effect
+            triggers = target(self)
+
+            # Move used spell to graveyard
+            if isinstance(target, Spell):
+                self.change_zone(target, Zone.GRAVEYARD)
+
+            # Add triggers to stack
+            for trigger in triggers:
+                self.react(trigger)
 
     def handle_action(self, packet):
         if packet["subtype"] == "pass":

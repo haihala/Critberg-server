@@ -8,14 +8,19 @@ Permanent(
     {"mana": 4},                # Cost
     {"mana: 1},                 # Fuel
     triggered = [
-        @triggered_ability("PLAY", constraint = lambda triggerer, this: triggerer.owner is this.owner)
+        @triggered_ability(
+            "PLAY",
+            constraint = lambda triggerer, this: triggerer.owner is this.owner
+            )
         def storm_heal(self, instance):
             return self.parent.owner.heal(instance.storm_count)
     ]
     activated = [
-        @activated_ability({"life": 50})
-        def health_nuke(self, instance, target=None):
-            yield prompt_target([Player, Creature])
+        @activated_ability(
+            {"life": 50},
+            requirements = [["TARGET", lambda target: isinstance(target, Creature) or isinstance(target, Player)]]
+            )
+        def health_nuke(self, instance, target):
             return instance.gameobjects[target].hurt_(50)
     ]
 )
@@ -28,11 +33,12 @@ Spell(
     "lightning bolt",
     {"mana": 1},
     {"mana": 1},
+    def func(self, instance, target):
+        return instance.gameobjects[target].hurt(3),
     speed = 1,
-    constraint = lambda target, this: isinstance(target, Creature) or isinstance(target, Player),
-    def func(instance, target=None):
-        yield prompt_target([Player, Creature])
-        return instance.gameobjects[target].hurt(3)
+    requirements = [
+        ["TARGET", lambda target: isinstance(target, Creature) or isinstance(target, Player)]
+        ]
     )
 )
 ```

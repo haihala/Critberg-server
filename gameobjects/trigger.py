@@ -10,7 +10,7 @@ from .gameobject import GameObject
 from .permanent import Permanent
 from .player import Player
 
-from util.zone import Zone
+from engine.zone import Zone
 
 
 TRIGGER_TYPES: {
