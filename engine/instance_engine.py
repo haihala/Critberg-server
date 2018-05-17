@@ -92,11 +92,10 @@ class Instance_engine(object):
         return ID
 
     def tick(self, packet):
-        # rough structure:
-        # 1. handle the input
+        # handle input
         self.handle_action(packet)
 
-        # 2. check for win-states (check if a player is dead)
+        # check for win-states (check if a player is dead)
         self.death_check()
 
     def resolve(self):
@@ -105,19 +104,23 @@ class Instance_engine(object):
 
         # 2. Deal with that
         if isinstance(target, Permanent):
-            self.change_zone(target, Zone.BATTLEFIELD)
+            self.change_zone(target, Zone.DEFENSE)
         else:
-            # Either an ability or a spell
-            # Resolve the effect
-            triggers = target(self)
+            if self.pre_execute(target):
+                # Resolve the effect
+                triggers = target(self)
 
-            # Move used spell to graveyard
-            if isinstance(target, Spell):
-                self.change_zone(target, Zone.GRAVEYARD)
+                # Move used spell to graveyard
+                if isinstance(target, Spell):
+                    self.change_zone(target, Zone.GRAVEYARD)
 
-            # Add triggers to stack
-            for trigger in triggers:
-                self.react(trigger)
+                # Add triggers to stack
+                for trigger in triggers:
+                    self.react(trigger)
+            else:
+                pass
+                # Tell everyone the spell fizzled.
+
 
     def handle_action(self, packet):
         if packet["subtype"] == "pass":
@@ -169,8 +172,9 @@ class Instance_engine(object):
                 if target.max_activations:
                     target.activations += 1
             else:
-                trigger_type = "USE"
+                trigger_type = "PLAY"
 
+            target.parameters = self.parse_params(target, packet["parameters"])
             # Add the card/ability to stack.
             self.stack.push(target)
             self.broadcast(stack_add_action_packet(packet["instance"]))
@@ -225,7 +229,25 @@ class Instance_engine(object):
         return [j for i, j in self.gameobjects if isinstance(j, Triggered_ability)]
 
     def change_zone(self, mover, destination):
-        self.react(Trigger("EXIT", [mover, mover.zone]))
+        # DISCUSS
+        # This is done in this way, because it's easier handling cards so that they always have an intutive zone.
+        # This is why we react to the card exiting it's zone when the card is still in that zone
+        # This makes it so, we don't need to pass zone arguments to the trigger.
+        self.react(Trigger("EXIT", [mover]))
         mover.order = order()
+        mover.owner.move(mover, destination)
         mover.zone = destination
-        self.react(Trigger("ENTER", [mover, mover.zone]))
+        self.react(Trigger("ENTER", [mover]))
+
+    def pre_execute(self, target):
+        # Drain resources, verify parameters
+        target.owner.drain(target.cost)
+        for i in range(len(target.requirements)):
+            if not target.requirements[i][1](target.parameters[i]):
+                # If a single parameter is invalid, fizzle
+                return False
+
+    def parse_params(self, target, params):
+        while len(params) < len(target.requirements):
+            params.append(None)
+        return params

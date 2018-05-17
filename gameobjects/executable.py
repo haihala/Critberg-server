@@ -5,7 +5,10 @@ Something that can be executed (spell or ability)
 class Executable():
     """
     Fields:
-    ability: function that takes in the instance and returns a (list of triggers, new instance) -tuple
+    requirements: list of (string, function) -tuples, where the string is the type of parameter required and the function is there to validate said function. Example in set_file.md
+    parameters: list of parameters the user has selected for the ones listed in requirements.
+
     """
     def __init__(self):
         self.requirements = []
+        self.parameters = []

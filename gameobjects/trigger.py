@@ -24,8 +24,8 @@ TRIGGER_TYPES: {
     "START_OF_TURN": [Player],                  # Somebodys turn starts
     "PLAY": [Player, Card],                     # Someone played some card
     "USE": [Ability, Permanent],                # Some ability on some permanent was used
-    "ENTER": [Card, Zone],                      # Something enters zone
-    "EXIT": [Card, Zone],                       # Something leaves zone
+    "ENTER": [Card],                            # Something is entering it's zone
+    "EXIT": [Card],                             # Something is leaving it's zone
     "TARGET": [GameObject, [Card, Ability]]     # Some gameobject was targeted by some card or ability
                                                 # DISCUSS
                                                 # I'd imagine this asks for discussion. I vision targeting happening mid-resolution.

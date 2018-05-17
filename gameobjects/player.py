@@ -4,6 +4,9 @@ Represents the players of the game.
 """
 
 from .gameobject import GameObject
+
+from engine.zone import Zone
+
 from util.config import RESOURCES, STARTING_HEALTH
 from util.packet import packet_encode
 
@@ -25,22 +28,26 @@ class Player(GameObject):
     def __init__(self, user):
         GameObject.__init__(self)
 
-        self.resource = {i: 0 for i in RESOURCES}
+        self.resources = {i: 0 for i in RESOURCES}
         self.health = STARTING_HEALTH
         self.dead = False
-        self.hand = []
-        self.deck = []
-        self.library = []
-        self.attack = []
-        self.defense = []
-        self.graveyard = []
-        self.exile = []
+        self.zones = {z: [] for z in Zone}
 
         self.user = user
 
-    def can_afford(self, card):
-        # TODO
+    def can_afford(self, cost):
+        return all([self.resources[resource] >= amount for resource, amount in cost])
+
+    def drain(self, cost):
+        if not self.can_afford(cost):
+            return False
+        for resource, amount in cost:
+            self.resources[resource] -= amount
         return True
 
     def send(self, packet):
         self.user.socket.send(packet_encode(packet))
+
+    def move(self, card, zone):
+        self.zones[card.zone].remove(card)
+        self.zones[zone].append(card)
