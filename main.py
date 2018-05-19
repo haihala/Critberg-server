@@ -23,7 +23,7 @@ def main(args):
     engine_thread.start()
 
     while True:
-        user_input = input(">").strip().lower()
+        user_input = input().strip().lower()
         if user_input == "stop":
             # To gracefully shut down the thread, use this approach.
             # After the loops in loop methods, implement everything required for a graceful shutdown.

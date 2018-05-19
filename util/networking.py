@@ -8,7 +8,7 @@ from .packet import packet_decode, packet_encode, new_user_packet, identify_resp
 from .user import User
 
 from select import select
-import socket
+from socket import socket, AF_INET, SOCK_STREAM
 
 class Network(object):
     def __init__(self, kwargs):
@@ -27,7 +27,7 @@ class Network(object):
         # key is socket, value is address-deletable tuple.
 
         # Todo: Handle errors in binding ports
-        self.listen_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.listen_socket = socket(AF_INET, SOCK_STREAM)
 
         self.listen_socket.bind(('', kwargs["networking"]["port"]))
         self.listen_socket.listen(10)  # enough to prevent weird errors, small enough to prevent ddos.
@@ -37,7 +37,7 @@ class Network(object):
     def loop(self):
         while self.running:
 
-            readable, [], exceptional = select(self.inputs, [], self.inputs)
+            readable, [], exceptional = select(self.inputs, [], self.inputs, 0.1)
 
             for sock in readable:
                 if sock is self.listen_socket:
