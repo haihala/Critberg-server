@@ -17,7 +17,8 @@ from util.packet import packet_encode
 from copy import deepcopy
 from itertools import cycle
 from random import shuffle
-from uuid import UUID
+# from uuid import UUID
+import uuid
 
 class Instance_engine(object):
     def __init__(self, users):
@@ -40,7 +41,7 @@ class Instance_engine(object):
         self.gameobjects = {}
         for player in self.players:
             self.add_gameobject(player)
-            player.deck = [lookup(i, j) for i, j in player.user.deck]
+            player.deck = [lookup(i, j) for i, j in player.user[1]]
             for card in player.deck:
                 self.add_gameobject(card)
                 for triggered in card.trigger:
@@ -74,7 +75,7 @@ class Instance_engine(object):
         # At this point, each player knows the uuid for everything and the cards within their deck but not the order.
 
     def add_gameobject(self, obj):
-        ID = UUID()
+        ID = str(uuid.uuid4())
         self.gameobjects[ID] = obj
         self.gameobjects[ID].uuid = ID
         return ID

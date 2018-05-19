@@ -34,8 +34,11 @@ class Master_engine(object):
             for user in self.users:
                 for message in self.network_handle.get_unreads(user):
                     if message["type"] == "message":
-                        self.network_handle.send(self.user_called(message["target"]), message_packet(user.name, message["content"]))
-                        self.network_handle.send(user, message_packet(user.name, message["content"]))
+                        if self.user_called(message["target"]) is None:
+                            self.network_handle.send(user, message_packet("Server", "User Not Found. Message not sent"))
+                        else:
+                            self.network_handle.send(self.user_called(message["target"]), message_packet(user.name, message["content"]))
+                            self.network_handle.send(user, message_packet(user.name, message["content"]))
                     elif message["type"] == "disconnect":
                         self.network_handle.broadcast(disconnect_packet(user.name))
                         self.network_handle.disconnect(user)

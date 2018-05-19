@@ -43,4 +43,4 @@ class Player(GameObject):
         return True
 
     def send(self, packet):
-        self.user.socket.send(packet_encode(packet))
+        self.user[0].socket.send(packet_encode(packet))
