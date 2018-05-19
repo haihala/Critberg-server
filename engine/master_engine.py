@@ -54,7 +54,7 @@ class Master_engine(object):
                                 self.network_handle.send(user, NOT_ACTIVE_PLAYER_ERROR)
 
             if len(self.queue) >= 2:
-                self.start_instance(self.queue[:2])
+                self.start_instance()
 
             for user in disconnected:
                 self.users.remove(user)
@@ -66,10 +66,11 @@ class Master_engine(object):
                         # TODO record stats.
                         # For card/player/deck winrates
 
-    def start_instance(self, players):
-        new_instance = Instance_engine(players)
-        for player in players:
-            self.instances[player] = new_instance
+    def start_instance(self):
+        users = [self.queue.pop for i in range(2)]
+        new_instance = Instance_engine(users)
+        for user in [u[0] for u in users]:
+            self.instances[user] = new_instance
 
     def user_called(self, name):
         try:
