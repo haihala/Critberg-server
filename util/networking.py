@@ -58,8 +58,9 @@ class Network(object):
                         if packet["type"] == "identify":
                             if packet["name"] not in [i.name for i in self._inbox]:
                                 # User with that name doesn't exist.
+                                print(packet["name"])
                                 self._generic_inbox.append(identify_response(packet["name"], *(sock, self.unverified[sock][0])))
-                                self.unverified[sock][1] = True
+                                self.unverified[sock] = (self.unverified[sock][0],self.unverified[sock][1])
                             else:
                                 sock.send(NAME_IN_USE_ERROR)
 

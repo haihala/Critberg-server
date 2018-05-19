@@ -35,8 +35,9 @@ class Master_engine(object):
                 for message in self.network_handle.get_unreads(user):
                     if message["type"] == "message":
                         self.network_handle.send(self.user_called(message["target"]), message_packet(user.name, message["content"]))
+                        self.network_handle.send(user, message_packet(user.name, message["content"]))
                     elif message["type"] == "disconnect":
-                        self.network_handle.broadcast(disconnect_packet(user.name, user.address))
+                        self.network_handle.broadcast(disconnect_packet(user.name))
                         self.network_handle.disconnect(user)
                         disconnected.append(user)
                     elif message["type"] == "queue":

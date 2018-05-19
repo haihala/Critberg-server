@@ -34,11 +34,10 @@ def connect_packet(name):
                                     # See "skype ddos" for context
     }
 
-def disconnect_packet(name, addr):
+def disconnect_packet(name):
     return {
         "type": "disconnect",
-        "name": name,
-        "address": addr
+        "name": name
     }
 
 def message_packet(sender, content):
