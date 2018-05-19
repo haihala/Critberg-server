@@ -53,3 +53,8 @@ class Player(GameObject):
     def move(self, card, zone):
         self.zones[card.zone].remove(card)
         self.zones[zone].append(card)
+
+    def draw(self, amount=1):
+        for _ in amount:
+            if len(self.zones[Zone.LIBRARY]):
+                self.move(self.zones[Zone.LIBRARY][0], Zone.HAND)

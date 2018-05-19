@@ -18,7 +18,7 @@ Permanent(
     activated = [
         @activated_ability(
             {"life": 50},
-            requirements = [["TARGET", lambda target: isinstance(target, Creature) or isinstance(target, Player)]]
+            requirements = [lambda target: isinstance(target, Creature) or isinstance(target, Player)]
             )
         def health_nuke(self, instance, target):
             return instance.gameobjects[target].hurt_(50)
@@ -36,9 +36,7 @@ Spell(
     def func(self, instance, target):
         return instance.gameobjects[target].hurt(3),
     speed = 1,
-    requirements = [
-        ["TARGET", lambda target: isinstance(target, Creature) or isinstance(target, Player)]
-        ]
+    requirements = [lambda target: isinstance(target, Creature) or isinstance(target, Player)]
     )
 )
 ```

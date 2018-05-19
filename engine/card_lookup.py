@@ -3,12 +3,18 @@ Will be used to lookup cards from IDs.
 
 """
 
-from gameobjects.card import Card
-
-loli_squire = Card(
-
-)
+from gameobjects.creature import Creature
+from util.config import RESOURCES
 
 def lookup(cardID, artID=0):
-    # TODO
-    return loli_squire
+    tmp = Creature(
+        "loli squire",
+        {'Apple': 2},
+        {'Apple': 1},
+        1,
+        1,
+    )
+
+    tmp.card_id = 0
+
+    return tmp

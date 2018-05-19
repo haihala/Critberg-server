@@ -8,3 +8,4 @@ class Zone(Enum):
     GRAVEYARD = auto()
     LIBRARY = auto()
     SIDEBOARD = auto()
+    RESOURCE = auto()

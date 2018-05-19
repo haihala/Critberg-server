@@ -49,6 +49,10 @@ def message_packet(sender, content):
         "content": content
     }
 
+def queue_enter():
+    return {
+        "type": "queue_enter"
+    }
 
 def packet_encode(packet):
     return dumps(packet).encode("UTF-8") + b'\n'
@@ -70,25 +74,17 @@ def authenticate(packet):
     if "type" not in packet:
         return False
     elif packet["type"] == "identify":
-        if "name" not in packet:
-            return False
-        if not isinstance(packet["name"], str):
+        if "name" not in packet or not isinstance(packet["name"], str):
             return False
         return True
     elif packet["type"] == "message":
-        if "target" not in packet:
+        if "target" not in packet or not isinstance(packet["target"], str):
             return False
-        if not isinstance(packet["target"], str):
-            return False
-        if "content" not in packet:
-            return False
-        if not isinstance(packet["content"], str):
+        if "content" not in packet or not isinstance(packet["content"], str):
             return False
         return True
     elif packet["type"] == "queue":
-        if "deck" not in packet:
-            return False
-        if not isinstance(packet["deck"], list):
+        if "deck" not in packet or not isinstance(packet["deck"], list):
             return False
         if not all(len(i) == 2 for i in packet["deck"]):
             return False
@@ -100,10 +96,12 @@ def authenticate(packet):
             return False
         if packet["subtype"] == "pass":
             return True
-        if packet["subtype"] == "use":
-            if "instance" not in packet:
+        elif packet["subtype"] == "use":
+            if "instance" not in packet or not isinstance(packet["instance"], str):
                 return False
-            if not isinstance(packet["instance"], str):
+            return True
+        elif packet["subtype"] == "prompt":
+            if "params" not in packet or not isinstance(packet["params"], list):
                 return False
             return True
 

@@ -60,3 +60,20 @@ def win_packet(winner):
         "subtype": "victory",
         "player": winner
     }
+
+def move_packet(mover, original, target):
+    return {
+        "type": "game_update",
+        "subtype": "move",
+        "mover": mover,
+        "from": original,
+        "to": target
+    }
+
+def prompt_params(uuid, params):
+    return {
+        "type": "game_update",
+        "subtype": "param_prompt",
+        "object": uuid,
+        "params": params
+    }

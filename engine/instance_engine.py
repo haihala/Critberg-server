@@ -22,7 +22,7 @@ from copy import deepcopy
 from itertools import cycle
 from random import shuffle
 # from uuid import UUID
-import uuid
+from uuid import uuid4
 
 def order():
     i = 0
@@ -44,6 +44,7 @@ class Instance_engine(object):
 
         self.over = False
         self.winner = None
+        self.casting = None
 
         self.stack = Stack()
 
@@ -54,7 +55,7 @@ class Instance_engine(object):
             for card in player.zones[Zone.LIBRARY]:
                 card.order = order()
                 self.add_gameobject(card)
-                for triggered in card.trigger:
+                for triggered in card.triggered:
                     triggered.order = order()
                     self.add_gameobject(triggered)
                 for activated in card.activated:
@@ -81,7 +82,7 @@ class Instance_engine(object):
             # Tell each player what does their deck contain.
             player.send(card_reveal_packet(
                 [
-                    [card.uuid, card.id]
+                    [card.uuid, card.card_id]
                     for card in player.zones[Zone.LIBRARY]
                 ], True
             ))
@@ -89,7 +90,7 @@ class Instance_engine(object):
         # At this point, each player knows the uuid for everything and the cards within their deck but not the order.
 
     def add_gameobject(self, obj):
-        ID = str(uuid.uuid4())
+        ID = str(uuid4())
         self.gameobjects[ID] = obj
         self.gameobjects[ID].uuid = ID
         return ID
@@ -124,7 +125,6 @@ class Instance_engine(object):
                 pass
                 # Tell everyone the spell fizzled.
 
-
     def handle_action(self, packet):
         if packet["subtype"] == "pass":
             if self.stack.empty():
@@ -137,6 +137,7 @@ class Instance_engine(object):
 
                 self.active_player = self.turn_owner
                 self.broadcast(turn_start_packet(self.turn_owner))
+                self.turn_owner.draw()
 
                 # DISCUSS, should ability activations have a certain amount per turn or per own turn.
                 # Should the ability.activations reset each turn swap or only when the controllers turn starts
@@ -179,21 +180,19 @@ class Instance_engine(object):
                     self.active_player.send(ACTIVATIONS_USED_ERROR)
                     return
 
-                trigger_type = "USE"
                 if target.max_activations:
                     target.activations += 1
+
+            if not target.requirements or target.zone is Zone.RESOURCE:
+                self.play(target)
             else:
-                trigger_type = "PLAY"
+                self.prompt_params(target)
+                self.casting = target
 
-            target.parameters = self.parse_params(target, packet["parameters"])
-            # Add the card/ability to stack.
-            self.stack.push(target)
-            self.broadcast(stack_add_action_packet(packet["instance"]))
-
-            # Add the trigger to stack
-            self.react(Trigger(trigger_type, target))
-
-            self.rotate_priority()
+        elif packet["subtype"] == "prompt" and self.casting:
+            self.casting.parameter = packet["params"]
+            self.play(self.casting)
+            self.casting = None
 
     def rotate_priority(self):
         self.active_player = self.next_from(self.active_player)
@@ -246,6 +245,7 @@ class Instance_engine(object):
         # This makes it so, we don't need to pass zone arguments to the trigger.
         self.react(Trigger("EXIT", [mover]))
         mover.order = order()
+        self.broadcast(move_packet(mover.uuid, mover.zone, destination))
         mover.owner.move(mover, destination)
         mover.zone = destination
         self.react(Trigger("ENTER", [mover]))
@@ -254,11 +254,33 @@ class Instance_engine(object):
         # Drain resources, verify parameters
         target.owner.drain(target.cost)
         for i in range(len(target.requirements)):
-            if not target.requirements[i][1](target.parameters[i]):
+            tester = target.parameters[i]
+            if target.parameters[i] in self.gameobjects:
+                tester = self.gameobjects[target.parameters[i]]
+            if not target.requirements[i][1](tester):
                 # If a single parameter is invalid, fizzle
                 return False
 
-    def parse_params(self, target, params):
-        while len(params) < len(target.requirements):
-            params.append(None)
-        return params
+    def prompt_params(self, card):
+        params = None
+        if card.zone == Zone.HAND:
+            params = [["PLAY", "RESOURCE"]]
+            if isinstance(card, Spell):
+                params += [uuid for uuid, target in self.gameobjects.items() if req(target) for req in card.requirements]
+            else:
+                params += ["OFFENSE", "DEFENSE"]
+
+        elif card.zone == Zone.OFFENSE:
+            params = [["DEFENSE", *[creature.uuid for creature in player.zones[Zone.DEFENSE] for player in self.players]]]
+
+        self.active_player.send(prompt_params(card.uuid, params))
+
+    def play(self, target):
+        # Add the card/ability to stack.
+        self.stack.push(target)
+        self.broadcast(stack_add_action_packet(target.uuid))
+
+        # Add the trigger to stack
+        self.react(Trigger(["PLAY", "USE"][int(isinstance(target, Ability))], target))
+
+        self.rotate_priority()

@@ -34,6 +34,7 @@ class Card(GameObject):
         self.zone = None
 
         self.art = None
+        self.card_id = None
 
         self.triggered = []
         self.activated = []

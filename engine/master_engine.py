@@ -7,7 +7,7 @@ from .instance_engine import Instance_engine
 
 from util.user import User
 from util.errors import NOT_ACTIVE_PLAYER_ERROR
-from util.packet import identify_prompt, message_packet, connect_packet, disconnect_packet
+from util.packet import identify_prompt, message_packet, connect_packet, disconnect_packet, queue_enter
 
 
 class Master_engine(object):
@@ -46,6 +46,7 @@ class Master_engine(object):
                     elif message["type"] == "queue":
                         self.queue.append((user, message["deck"]))
                         # TODO at this point, verify deck.
+                        self.network_handle.send(user, queue_enter())
                     elif message["type"] == "game_action":
                         if user in self.instances:
                             if user is self.instances[user].active_player.user:
