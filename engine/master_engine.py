@@ -34,7 +34,7 @@ class Master_engine(object):
             for user in self.users:
                 for message in self.network_handle.get_unreads(user):
                     if message["type"] == "message":
-                        if self.user_called(message["target"]) is None:
+                        if not self.user_called(message["target"]):
                             self.network_handle.send(user, message_packet("Server", "User Not Found. Message not sent"))
                         else:
                             self.network_handle.send(self.user_called(message["target"]), message_packet(user.name, message["content"]))
@@ -48,7 +48,7 @@ class Master_engine(object):
                         # TODO at this point, verify deck.
                     elif message["type"] == "game_action":
                         if user in self.instances:
-                            if user is self.instances[user].active_player:
+                            if user is self.instances[user].active_player.user:
                                 self.instances[user].tick(message)
                             else:
                                 self.network_handle.send(user, NOT_ACTIVE_PLAYER_ERROR)
@@ -59,7 +59,7 @@ class Master_engine(object):
             for user in disconnected:
                 self.users.remove(user)
 
-            for user, game in self.instances:
+            for user, game in self.instances.items():
                 if game.over:
                     for player in game.players:
                         del self.instances[player]
@@ -67,7 +67,7 @@ class Master_engine(object):
                         # For card/player/deck winrates
 
     def start_instance(self):
-        users = [self.queue.pop for i in range(2)]
+        users = [self.queue.pop() for i in range(2)]
         new_instance = Instance_engine(users)
         for user in [u[0] for u in users]:
             self.instances[user] = new_instance

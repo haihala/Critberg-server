@@ -2,6 +2,8 @@
 Module for handling packets. Mostly used to create commonly used packets.
 
 """
+from .errors import INVALID_PACKET
+
 from json import dumps, loads
 from json.decoder import JSONDecodeError
 
@@ -49,12 +51,60 @@ def message_packet(sender, content):
 
 
 def packet_encode(packet):
-    return dumps(packet).encode("UTF-8")
+    return dumps(packet).encode("UTF-8") + b'\n'
 
 def packet_decode(data):
-    # TODO
     # This should validate the packet. Check that it does contain everything required for a packet of it's type
+    packet = None
     try:  # Given faulty bytes, loads can fail.
-        return loads(data.decode("UTF-8"))
+        packet = loads(data.decode("UTF-8"))
     except JSONDecodeError:
         return None
+
+    if authenticate(packet):
+        return packet
+    else:
+        return INVALID_PACKET
+
+def authenticate(packet):
+    if "type" not in packet:
+        return False
+    elif packet["type"] == "identify":
+        if "name" not in packet:
+            return False
+        if not isinstance(packet["name"], str):
+            return False
+        return True
+    elif packet["type"] == "message":
+        if "target" not in packet:
+            return False
+        if not isinstance(packet["target"], str):
+            return False
+        if "content" not in packet:
+            return False
+        if not isinstance(packet["content"], str):
+            return False
+        return True
+    elif packet["type"] == "queue":
+        if "deck" not in packet:
+            return False
+        if not isinstance(packet["deck"], list):
+            return False
+        if not all(len(i) == 2 for i in packet["deck"]):
+            return False
+        return True
+    elif packet["type"] == "disconnect":
+        return True
+    elif packet["type"] == "game_action":
+        if "subtype" not in packet:
+            return False
+        if packet["subtype"] == "pass":
+            return True
+        if packet["subtype"] == "use":
+            if "instance" not in packet:
+                return False
+            if not isinstance(packet["instance"], str):
+                return False
+            return True
+
+    return False        # Packet has invalid type

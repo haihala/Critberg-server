@@ -3,7 +3,7 @@ Abstraction of the networking. Used to parse packages to usable format, etcetera
 
 """
 
-from .errors import NAME_IN_USE_ERROR
+from .errors import NAME_IN_USE_ERROR, INVALID_PACKET
 from .packet import packet_decode, packet_encode, new_user_packet, identify_response, message_packet
 from .user import User
 
@@ -53,6 +53,8 @@ class Network(object):
                     packet = self.get_packet(sock)
                     if not packet:
                         continue
+                    if packet == INVALID_PACKET:
+                        sock.send(packet_encode(INVALID_PACKET))
 
                     if sock in self.unverified:
                         if packet["type"] == "identify":
@@ -61,7 +63,7 @@ class Network(object):
                                 self._generic_inbox.append(identify_response(packet["name"], *(sock, self.unverified[sock][0])))
                                 self.unverified[sock] = (self.unverified[sock][0],True)
                             else:
-                                sock.send(NAME_IN_USE_ERROR)
+                                sock.send(packet_encode(NAME_IN_USE_ERROR))
 
                     self.unverified = {i: self.unverified[i] for i in self.unverified if not self.unverified[i][1]}
 
@@ -86,7 +88,12 @@ class Network(object):
             if len(tmp) < 1024:
                 break
 
-        return packet_decode(data)
+        ret = packet_decode(data)
+
+        if ret:
+            print("In: ", end="")
+            print(ret)
+            return ret
         # Packet field existance is checked in packet_parse
 
     def add_user(self, user):
@@ -104,6 +111,8 @@ class Network(object):
         return unread
 
     def send(self, user, packet):
+        print("Out: ", end="")
+        print(packet)
         user.socket.send(packet_encode(packet))
 
     def reply(self, original, reply):

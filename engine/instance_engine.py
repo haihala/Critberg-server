@@ -8,12 +8,13 @@ from .stack import Stack
 from .zone import Zone
 
 from gameobjects.ability import Ability
+from gameobjects.card import Card
 from gameobjects.permanent import Permanent
 from gameobjects.player import Player
 from gameobjects.spell import Spell
 from gameobjects.trigger import Trigger
 from gameobjects.triggered_ability import Triggered_ability
-from util.errors import NOT_FAST_ENOUGH_ERROR, NOT_ENOUGH_RESOURCES_ERROR, INVALID_ZONE_ERROR, ACTIVATIONS_USED_ERROR
+from util.errors import NOT_FAST_ENOUGH_ERROR, NOT_ENOUGH_RESOURCES_ERROR, INVALID_ZONE_ERROR, ACTIVATIONS_USED_ERROR, INVALID_UUID_ERROR, INVALID_TYPE_ERROR
 from util.instance_packet import *
 from util.packet import packet_encode
 
@@ -31,7 +32,7 @@ def order():
 
 class Instance_engine(object):
     def __init__(self, users):
-        self.players = [Player(user) for user in users]
+        self.players = [Player(user, deck) for user, deck in users]
         self.player_iterator = cycle(self.players)
         # cycle is an iterator, that has a next operator. Basically, it loops endlessly and seamlessly
         # an iterator cannot tell it's current value, so storing it is probably smart.
@@ -50,8 +51,7 @@ class Instance_engine(object):
         self.gameobjects = {}
         for player in self.players:
             self.add_gameobject(player)
-            player.deck = [lookup(i, j) for i, j in player.user[1]]
-            for card in player.deck:
+            for card in player.zones[Zone.LIBRARY]:
                 card.order = order()
                 self.add_gameobject(card)
                 for triggered in card.trigger:
@@ -68,22 +68,24 @@ class Instance_engine(object):
                     player.uuid, player.name,
                     [
                         card.uuid
-                        for card in player.deck
+                        for card in player.zones[Zone.LIBRARY]
                     ]
                 ]
                 for player in self.players
             ]
         ))
 
+        self.broadcast(turn_start_packet(self.turn_owner))
+
         for player in self.players:
             # Tell each player what does their deck contain.
-            self.active_player.send(card_reveal_packet(
+            player.send(card_reveal_packet(
                 [
                     [card.uuid, card.id]
-                    for card in player.deck
+                    for card in player.zones[Zone.LIBRARY]
                 ], True
             ))
-            shuffle(player.deck)
+            shuffle(player.zones[Zone.LIBRARY])
         # At this point, each player knows the uuid for everything and the cards within their deck but not the order.
 
     def add_gameobject(self, obj):
@@ -151,7 +153,15 @@ class Instance_engine(object):
 
         elif packet["subtype"] == "use":
             # User attempts to use an ability or play a card.
+            if packet["instance"] not in self.gameobjects:
+                self.active_player.send(INVALID_UUID_ERROR)
+                return
+
             target = self.gameobjects[packet["instance"]]
+            if not (isinstance(target, Ability) or isinstance(target, Card)):
+                self.active_player.send(INVALID_TYPE_ERROR)
+                return
+
             if target.speed < self.stack.peek_next().speed:
                 self.active_player.send(NOT_FAST_ENOUGH_ERROR)
                 return

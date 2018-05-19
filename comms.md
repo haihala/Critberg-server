@@ -46,6 +46,16 @@ Message packets are in client instant messages between clients.
 }
 ```
 
+#### Disconnect
+
+User wishes to disconnect from the server.
+
+```json
+{
+    "type": "disconnect",
+}
+```
+
 ### Game
 
 All game packets must have their`type` field set to `game_action`. This lets the main engine easily forward these packets to the instance server in question. The `subtype` field is used to determine the type of the action the user wishes to conduct in game.

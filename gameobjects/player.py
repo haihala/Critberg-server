@@ -6,6 +6,7 @@ Represents the players of the game.
 from .gameobject import GameObject
 
 from engine.zone import Zone
+from engine.card_lookup import lookup
 
 from util.config import RESOURCES, STARTING_HEALTH
 from util.packet import packet_encode
@@ -25,15 +26,16 @@ class Player(GameObject):
     exile: list of Cards this player has exiled.
     user: User that controls this player.
     """
-    def __init__(self, user):
+    def __init__(self, user, deck):
         GameObject.__init__(self)
 
         self.resources = {i: 0 for i in RESOURCES}
         self.health = STARTING_HEALTH
         self.dead = False
         self.zones = {z: [] for z in Zone}
-
+        self.zones[Zone.LIBRARY] = [lookup(i, j) for i, j in deck]
         self.user = user
+        self.name = user.name
 
     def can_afford(self, cost):
         return all([self.resources[resource] >= amount for resource, amount in cost])
