@@ -8,15 +8,20 @@ Permanent(
     {"mana": 4},                # Cost
     {"mana: 1},                 # Fuel
     triggered = [
-        @triggered_ability("PLAY", constraint = lambda triggerer, this: triggerer.owner is this.owner)
+        @triggered_ability(
+            "PLAY",
+            constraint = lambda triggerer, this: triggerer.owner is this.owner
+            )
         def storm_heal(self, instance):
-            yield self.parent.owner.heal(instance.storm_count)
+            return self.parent.owner.heal(instance.storm_count)
     ]
     activated = [
-        @activated_ability({"life": 50})
-        def health_nuke(self, instance, target=None):
-            yield prompt_target([Player, Creature])
-            yield instance.gameobjects[target].hurt_(50)
+        @activated_ability(
+            {"life": 50},
+            requirements = [["TARGET", lambda target: isinstance(target, Creature) or isinstance(target, Player)]]
+            )
+        def health_nuke(self, instance, target):
+            return instance.gameobjects[target].hurt_(50)
     ]
 )
 ```
@@ -28,19 +33,22 @@ Spell(
     "lightning bolt",
     {"mana": 1},
     {"mana": 1},
+    def func(self, instance, target):
+        return instance.gameobjects[target].hurt(3),
     speed = 1,
-    constraint = lambda target, this: isinstance(target, Creature) or isinstance(target, Player),
-    def func(instance, target=None):
-        yield prompt_target([Player, Creature])
-        yield instance.gameobjects[target].hurt(3)
+    requirements = [
+        ["TARGET", lambda target: isinstance(target, Creature) or isinstance(target, Player)]
+        ]
     )
 )
 ```
 
 About the functions
 
-* yield every trigger caused when they are caused.
+* yield every prompt caused when they are caused.
+* return all caused triggers in the end.
 * use specified functions for interacting with the instance (heal and hurt) instead of directly adding or subtracting to numbers.
     * This is because these functions return triggers and yielding them makes sure every trigger is correctly handled.
+    * These specified functions return triggers one can return.
 
 prompt_target is pretty much a pre-built function that returns a signal asking for a target and putting a target trigger on the stack.

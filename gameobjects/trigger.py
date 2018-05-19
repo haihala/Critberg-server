@@ -10,6 +10,8 @@ from .gameobject import GameObject
 from .permanent import Permanent
 from .player import Player
 
+from engine.zone import Zone
+
 
 TRIGGER_TYPES: {
     # "Name of trigger": [first_param_type, [Possible, types, of, second, param]]
@@ -20,9 +22,10 @@ TRIGGER_TYPES: {
     "DEFEND": [Creature, Creature],             # Something is attacked by something
     "END_OF_TURN": [Player],                    # Somebodys turn ends
     "START_OF_TURN": [Player],                  # Somebodys turn starts
-    "ZONE_CHANGE": [GameObject, str],           # Something is moved to a different zone (dying is just moving from the battlefield to the grave.)
     "PLAY": [Player, Card],                     # Someone played some card
     "USE": [Ability, Permanent],                # Some ability on some permanent was used
+    "ENTER": [Card],                            # Something is entering it's zone
+    "EXIT": [Card],                             # Something is leaving it's zone
     "TARGET": [GameObject, [Card, Ability]]     # Some gameobject was targeted by some card or ability
                                                 # DISCUSS
                                                 # I'd imagine this asks for discussion. I vision targeting happening mid-resolution.
@@ -32,7 +35,7 @@ TRIGGER_TYPES: {
 
 
 
-class Trigger(GameObject):
+class Trigger():
     """
     Fields:
     used_abilities: list of abilities that have already activated on this specific trigger
@@ -41,7 +44,6 @@ class Trigger(GameObject):
     """
 
     def __init__(self, trigger_type, type_params):
-        GameObject.__init__(self)
         self.used_abilities = []
         # List of uuids of things that have already been in the stack because of this specific trigger.
         # Note, not this kind of trigger.

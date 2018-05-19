@@ -5,9 +5,12 @@ Will eventually contain the class used for an interface to manage a singular gam
 
 from .card_lookup import lookup
 from .stack import Stack
+from .zone import Zone
 
 from gameobjects.ability import Ability
+from gameobjects.permanent import Permanent
 from gameobjects.player import Player
+from gameobjects.spell import Spell
 from gameobjects.trigger import Trigger
 from gameobjects.triggered_ability import Triggered_ability
 from util.errors import NOT_FAST_ENOUGH_ERROR, NOT_ENOUGH_RESOURCES_ERROR, INVALID_ZONE_ERROR, ACTIVATIONS_USED_ERROR
@@ -19,6 +22,12 @@ from itertools import cycle
 from random import shuffle
 # from uuid import UUID
 import uuid
+
+def order():
+    i = 0
+    while True:
+        yield i
+        i += 1
 
 class Instance_engine(object):
     def __init__(self, users):
@@ -43,10 +52,13 @@ class Instance_engine(object):
             self.add_gameobject(player)
             player.deck = [lookup(i, j) for i, j in player.user[1]]
             for card in player.deck:
+                card.order = order()
                 self.add_gameobject(card)
                 for triggered in card.trigger:
+                    triggered.order = order()
                     self.add_gameobject(triggered)
                 for activated in card.activated:
+                    activated.order = order()
                     self.add_gameobject(activated)
 
         # Announce who is going first and what is the order of play
@@ -81,39 +93,35 @@ class Instance_engine(object):
         return ID
 
     def tick(self, packet):
-        # rough structure:
-        # 1. handle the input
+        # handle input
         self.handle_action(packet)
 
-        # 2. check for win-states (check if a player is dead)
+        # check for win-states (check if a player is dead)
         self.death_check()
 
     def resolve(self):
         # 1. Pop the top of the stack.
-        uuid, effect = self.stack.pop()
+        target = self.stack.pop()
 
         # 2. Deal with that
-        if isinstance(effect, Trigger):
-            # Trigger
-            # TODO DISCUSS PRIORITY REWORK THIS
-            # See https://docs.google.com/document/d/1FTYprrnAfiAXwuQqXbg7zs7GplVs_2IB2-B0bjd4S0Q/edit?usp=sharing for context
-            reacters = self.reacters(effect.trigger_type, effect.trigger_params)
-            reacters = sorted(reacters, lambda x: x.speed, True)
-            for reacter in reacters:
-                self.stack.push(reacter, self.gameobjects[reacter])
-            # Delete used trigger
-            del self.gameobjects[uuid]
+        if isinstance(target, Permanent):
+            self.change_zone(target, Zone.DEFENSE)
         else:
-            # Non-trigger
-            self.resolve_effect(effect)
+            if self.pre_execute(target):
+                # Resolve the effect
+                triggers = target(self)
 
+                # Move used spell to graveyard
+                if isinstance(target, Spell):
+                    self.change_zone(target, Zone.GRAVEYARD)
 
-    def resolve_effect(self, effect):
-        # Resolve the effect
-        triggers, self = effect.ability(self)
-        # Add triggers to stack
-        for trigger in triggers:
-            self.stack.push(trigger, self.gameobjects[trigger])
+                # Add triggers to stack
+                for trigger in triggers:
+                    self.react(trigger)
+            else:
+                pass
+                # Tell everyone the spell fizzled.
+
 
     def handle_action(self, packet):
         if packet["subtype"] == "pass":
@@ -134,7 +142,7 @@ class Instance_engine(object):
                     ability.activations = 0
             else:
                 # If stack is not full, pass priority
-                if self.stack.peek_next()[1].owner == self.active_player:
+                if self.stack.peek_next().owner == self.active_player:
                     # Priority lap has passed, resolve top card.
                     self.resolve()
                 self.rotate_priority()
@@ -144,7 +152,7 @@ class Instance_engine(object):
         elif packet["subtype"] == "use":
             # User attempts to use an ability or play a card.
             target = self.gameobjects[packet["instance"]]
-            if target.speed < self.stack.peek_next()[1].speed:
+            if target.speed < self.stack.peek_next().speed:
                 self.active_player.send(NOT_FAST_ENOUGH_ERROR)
                 return
 
@@ -165,14 +173,15 @@ class Instance_engine(object):
                 if target.max_activations:
                     target.activations += 1
             else:
-                trigger_type = "USE"
+                trigger_type = "PLAY"
 
+            target.parameters = self.parse_params(target, packet["parameters"])
             # Add the card/ability to stack.
-            self.stack.push(packet["instance"], target)
+            self.stack.push(target)
             self.broadcast(stack_add_action_packet(packet["instance"]))
 
             # Add the trigger to stack
-            self.trigger_add(trigger_type, target)
+            self.react(Trigger(trigger_type, target))
 
             self.rotate_priority()
 
@@ -192,11 +201,6 @@ class Instance_engine(object):
         for player in [i for i in self.players if i not in blacklist]:
             player.send(packet)
 
-    def trigger_add(self, trigger_type, trigger_params):
-        ID = self.add_gameobject(Trigger(trigger_type, trigger_params))
-        self.stack.push(ID, self.gameobjects[ID])
-        self.broadcast(stack_add_trigger_packet(ID, trigger_type, trigger_params))
-
     def death_check(self):
         for player in self.players:
             if player.health <= 0:
@@ -214,8 +218,37 @@ class Instance_engine(object):
             self.winner = players_alive[0]
             self.broadcast(win_packet(self.winner.uuid))
 
-    def reacters(self, trigger_type, trigger_params):
-        return [i for i in self.triggered_abilities() if i.trigger_type == trigger_type and i.constraint(trigger_params, i)]
+    def react(self, trigger):
+        trigger_type, trigger_params = trigger.trigger_type, trigger.trigger_params
+        reacters =  [i for i in self.triggered_abilities() if i.trigger_type == trigger_type and i.constraint(trigger_params, i)]
+        reacters = sorted(reacters, lambda x: x.order)
+        reacters = sorted(reacters, lambda x: x.speed)
+        for reacter in reacters:
+            self.stack.push(reacter)
 
     def triggered_abilities(self):
         return [j for i, j in self.gameobjects if isinstance(j, Triggered_ability)]
+
+    def change_zone(self, mover, destination):
+        # DISCUSS
+        # This is done in this way, because it's easier handling cards so that they always have an intutive zone.
+        # This is why we react to the card exiting it's zone when the card is still in that zone
+        # This makes it so, we don't need to pass zone arguments to the trigger.
+        self.react(Trigger("EXIT", [mover]))
+        mover.order = order()
+        mover.owner.move(mover, destination)
+        mover.zone = destination
+        self.react(Trigger("ENTER", [mover]))
+
+    def pre_execute(self, target):
+        # Drain resources, verify parameters
+        target.owner.drain(target.cost)
+        for i in range(len(target.requirements)):
+            if not target.requirements[i][1](target.parameters[i]):
+                # If a single parameter is invalid, fizzle
+                return False
+
+    def parse_params(self, target, params):
+        while len(params) < len(target.requirements):
+            params.append(None)
+        return params
