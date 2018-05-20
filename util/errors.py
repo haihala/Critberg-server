@@ -53,5 +53,11 @@ INVALID_UUID_ERROR = {
 INVALID_TYPE_ERROR = {
     "type": "error",
     "short": "type",
-    "value": "That uuid corresponds to a gameobject of the wrong type"
+    "value": "That gameobject is of the wrong type"
+}
+
+EXHAUSTED_ERROR = {
+    "type": "error",
+    "short": "exhaust",
+    "value": "That creature is exhausted."
 }

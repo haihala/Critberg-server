@@ -38,4 +38,5 @@ class Card(GameObject):
 
         self.triggered = []
         self.activated = []
+        self.parameters = []
 

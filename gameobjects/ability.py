@@ -26,6 +26,7 @@ class Ability(GameObject, Executable):
         self.max_activations = None
         self.parent = None
         self.usable_zones = []
+        self.parameters = []
         self.constraint = callable()
 
         self.activations = 0                # This can default to 0 because it isn't a constant property

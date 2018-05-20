@@ -22,3 +22,4 @@ class Permanent(Card):
         self.speed = speed
         self.triggered = triggered_abilities
         self.activated = activated_abilities
+        self.exhausted = False

@@ -1,3 +1,4 @@
+from engine.zone import to_string
 
 def game_start_packet(players):
     # Players: [<uuid>, <name>, <int number of cards in this player's deck>]
@@ -8,7 +9,7 @@ def game_start_packet(players):
     }
 
 def card_reveal_packet(cards):
-    cards = [[i.uuid, i.card_id] for i in cards]
+    cards = [[i.uuid, i.card_id, [j.uuid for j in i.triggered], [j.uuid for j in i.activated]] for i in cards]
 
     return {
         "type": "game_update",
@@ -62,8 +63,8 @@ def move_packet(mover, original, target):
         "type": "game_update",
         "subtype": "move",
         "mover": mover,
-        "from": original,
-        "to": target
+        "from": to_string(original),
+        "to": to_string(target)
     }
 
 def prompt_params(uuid, params):
@@ -72,4 +73,29 @@ def prompt_params(uuid, params):
         "subtype": "param_prompt",
         "object": uuid,
         "params": params
+    }
+
+def fizzle_packet(uuid, params):
+    return {
+        "type": "game_update",
+        "subtype": "fizzle",
+        "object": uuid,
+        "params": params
+    }
+
+def fight_packet(attacker, defender):
+    return {
+        "type": "game_update",
+        "subtype": "fight",
+        "attacker": attacker,
+        "defender": defender
+    }
+
+def resource_gain_packet(player, resources):
+    # TODO serialize resource types somehow.
+    return {
+        "type": "game_update",
+        "subtype": "resource_gain",
+        "player": player,
+        "resources": resources
     }

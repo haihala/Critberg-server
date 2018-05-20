@@ -13,17 +13,17 @@ from .player import Player
 from engine.zone import Zone
 
 
-TRIGGER_TYPES: {
+TRIGGER_TYPES = {
     # "Name of trigger": [first_param_type, [Possible, types, of, second, param]]
     "HEAL": [[Creature, Player], int],          # Something heals something
     "HURT": [[Creature, Player], int],          # Something does damage to something
     "DRAW": [Player, Card],                     # Somebody draws a card. Drawing many cards is done by repeating this.
-    "ATTACK": [Creature, Creature],             # Something attacks something
-    "DEFEND": [Creature, Creature],             # Something is attacked by something
+    "ATTACK": [Creature, [Creature, Player]],   # Something attacks something
+    "DEFEND": [[Creature, Player], Creature],   # Something is attacked by something
     "END_OF_TURN": [Player],                    # Somebodys turn ends
     "START_OF_TURN": [Player],                  # Somebodys turn starts
-    "PLAY": [Player, Card],                     # Someone played some card
-    "USE": [Ability, Permanent],                # Some ability on some permanent was used
+    "PLAY": [Card],                             # Someone played some card
+    "USE": [Ability],                           # Some ability on some permanent was used
     "ENTER": [Card],                            # Something is entering it's zone
     "EXIT": [Card],                             # Something is leaving it's zone
     "TARGET": [GameObject, [Card, Ability]]     # Some gameobject was targeted by some card or ability
@@ -31,7 +31,6 @@ TRIGGER_TYPES: {
                                                 # I'd imagine this asks for discussion. I vision targeting happening mid-resolution.
                                                 # And if something reacts to being targeted, it will be processed before the resolution is continued.
 }
-
 
 
 
@@ -44,15 +43,10 @@ class Trigger():
     """
 
     def __init__(self, trigger_type, type_params):
-        self.used_abilities = []
-        # List of uuids of things that have already been in the stack because of this specific trigger.
-        # Note, not this kind of trigger.
         self.type = trigger_type
-
-        if type(type_params) is not list:
-            type_params = [type_params]
         self.type_params = type_params
-
+        if not isinstance(self.type_params, list):
+            self.type_params = [self.type_params]
 
         # Check that given types make sense. Dealing damage to a trigger is stupid.
         # All type params are mandatory, if not enough are provided the software crashes.
@@ -60,15 +54,17 @@ class Trigger():
         # meaning that if this crashes, there is an error in the code and that should be fixed instead of try-caught.
         type_match = True
 
-        for param in range(len(type_params)):
+        for param in range(len(self.type_params)):
             if type_match:
-                if not isinstance(TRIGGER_TYPES[trigger_type], list):
-                    # Single accepted type
-                    if not isinstance(type_params[param], TRIGGER_TYPES[trigger_type]):
+                if isinstance(TRIGGER_TYPES[trigger_type][param], list):
+                    # Multiple types accepted
+                    if not any(isinstance(self.type_params[param], i) for i in TRIGGER_TYPES[trigger_type][param]):
                         type_match = False
                 else:
-                    # Multiple types accepted
-                    if not any(isinstance(type_params[param], i) for i in TRIGGER_TYPES[trigger_type][param]):
+                    # Single accepted type
+                    if not isinstance(self.type_params[param], TRIGGER_TYPES[trigger_type][param]):
                         type_match = False
+        if len(self.type_params) != len(TRIGGER_TYPES[trigger_type]):
+            type_match = False
 
         assert type_match

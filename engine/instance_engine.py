@@ -5,16 +5,18 @@ Will eventually contain the class used for an interface to manage a singular gam
 
 from .card_lookup import lookup
 from .stack import Stack
-from .zone import Zone
+from .zone import Zone, to_zone
 
 from gameobjects.ability import Ability
+from gameobjects.executable import Executable
 from gameobjects.card import Card
+from gameobjects.creature import Creature
 from gameobjects.permanent import Permanent
 from gameobjects.player import Player
 from gameobjects.spell import Spell
 from gameobjects.trigger import Trigger
 from gameobjects.triggered_ability import Triggered_ability
-from util.errors import NOT_FAST_ENOUGH_ERROR, NOT_ENOUGH_RESOURCES_ERROR, INVALID_ZONE_ERROR, ACTIVATIONS_USED_ERROR, INVALID_UUID_ERROR, INVALID_TYPE_ERROR
+from util.errors import NOT_FAST_ENOUGH_ERROR, NOT_ENOUGH_RESOURCES_ERROR, INVALID_ZONE_ERROR, ACTIVATIONS_USED_ERROR, INVALID_UUID_ERROR, INVALID_TYPE_ERROR, EXHAUSTED_ERROR
 from util.instance_packet import *
 from util.packet import packet_encode
 
@@ -53,6 +55,7 @@ class Instance_engine(object):
             self.add_gameobject(player)
             for card in player.zones[Zone.LIBRARY]:
                 card.order = order()
+                card.owner = player
                 self.add_gameobject(card)
                 for triggered in card.triggered:
                     triggered.order = order()
@@ -77,7 +80,7 @@ class Instance_engine(object):
         # Draw a starting hand.
         for player in self.players:
             shuffle(player.zones[Zone.LIBRARY])
-            player.draw(5)
+            player.draw(order, 5)
 
     def add_gameobject(self, obj):
         ID = str(uuid4())
@@ -97,27 +100,51 @@ class Instance_engine(object):
         target = self.stack.pop()
 
         # 2. Deal with that
-        if isinstance(target, Permanent):
-            self.change_zone(target, Zone.DEFENSE)
-        else:
-            self.broadcast(card_reveal_packet([target]))
-            if self.pre_execute(target):
-                # Resolve the effect
-                triggers = target(self)
+        if isinstance(target, Ability):
+            if self.executable_pre_resolve(target):
+                self.executable_resolve(target)
 
-                # Move used spell to graveyard
+        elif target.zone == Zone.HAND:
+            if self.card_pre_resolve(target):
                 if isinstance(target, Spell):
+                    self.executable_resolve(target)
                     self.change_zone(target, Zone.GRAVEYARD)
-
-                # Add triggers to stack
-                for trigger in triggers:
-                    self.react(trigger)
+                else:
+                    self.change_zone(target, to_zone(target.parameters[0]))
             else:
-                # Spell fizzles
+                # Fizzles
                 self.change_zone(target, Zone.GRAVEYARD)
+                self.broadcast(fizzle_packet(target.uuid, target.parameters))
+
+
+        elif target.exhausted:
+            target.owner.send(EXHAUSTED_ERROR)
+        else:
+            if target.zone == Zone.DEFENSE:
+                self.change_zone(target, Zone.OFFENSE)
+            elif target.zone == Zone.OFFENSE:
+                if target.parameters[0] in self.gameobjects:
+                    # Attacking
+                    opponent = self.gameobjects[target.parameters[0]]
+                    self.broadcast(fight_packet(target.uuid, opponent.uuid))
+
+                    self.react(Trigger("ATTACK", [target, opponent]))
+                    self.react(Trigger("DEFEND", [opponent, target]))
+                    target.fight(self.gameobjects[target.parameters[0]])
+
+                    for trigger in [Trigger("HURT", [target, opponent.attack]), Trigger("HURT", [opponent, target.attack])]:
+                        self.react(trigger)
+                elif target.parameters[0] == "DEFENSE":
+                    # Moving back
+                    self.change_zone(target, Zone.DEFENSE)
+            elif target.zone == Zone.RESOURCE:
+                target.owner.gain(target.fuel)
+                self.broadcast(resource_gain_packet(target.owner.uuid, target.owner.resources))
+            target.exhausted = True
 
     def handle_action(self, packet):
         if packet["subtype"] == "pass":
+            self.casting = None
             if self.stack.empty():
                 # If stack is empty, pass the turn
                 self.turn_owner = next(self.player_iterator)
@@ -128,7 +155,8 @@ class Instance_engine(object):
 
                 self.active_player = self.turn_owner
                 self.broadcast(turn_start_packet(self.turn_owner))
-                self.turn_owner.draw()
+                self.turn_owner.draw(order)
+                self.turn_owner.refresh()
 
                 # DISCUSS, should ability activations have a certain amount per turn or per own turn.
                 # Should the ability.activations reset each turn swap or only when the controllers turn starts
@@ -136,10 +164,12 @@ class Instance_engine(object):
                     ability.activations = 0
             else:
                 # If stack is not full, pass priority
-                if self.stack.peek_next().owner == self.active_player:
+                while self.stack.peek_next().owner == self.active_player:
                     # Priority lap has passed, resolve top card.
                     self.resolve()
-                self.rotate_priority()
+
+                if not self.stack.empty():
+                    self.rotate_priority()
                 # Top card was by the active player, meaning it was played when the active player had priority
                 # Meaning the next player from the active player should be the one to pick up after it's resolved.
 
@@ -150,38 +180,15 @@ class Instance_engine(object):
                 return
 
             target = self.gameobjects[packet["instance"]]
-            if not (isinstance(target, Ability) or isinstance(target, Card)):
-                self.active_player.send(INVALID_TYPE_ERROR)
-                return
-
-            if target.speed < self.stack.peek_next().speed:
-                self.active_player.send(NOT_FAST_ENOUGH_ERROR)
-                return
-
-            if self.active_player.can_afford(target.cost):
-                self.active_player.send(NOT_ENOUGH_RESOURCES_ERROR)
-                return
-
-            if isinstance(target, Ability):
-                if target.parent.zone not in target.usable_zones:
-                    self.active_player.send(INVALID_ZONE_ERROR)
-                    return
-
-                if target.max_activations <= target.activations:
-                    self.active_player.send(ACTIVATIONS_USED_ERROR)
-                    return
-
-                if target.max_activations:
-                    target.activations += 1
-
-            if not target.requirements or target.zone is Zone.RESOURCE:
-                self.play(target)
-            else:
-                self.prompt_params(target)
-                self.casting = target
+            if self.check_errors(target):
+                if (isinstance(target, Executable) and not target.requirements) or target.zone in [Zone.RESOURCE, Zone.DEFENSE]:
+                    self.play(target)
+                else:
+                    self.prompt_params(target)
+                    self.casting = target
 
         elif packet["subtype"] == "prompt" and self.casting:
-            self.casting.parameter = packet["params"]
+            self.casting.parameters = packet["params"]
             self.play(self.casting)
             self.casting = None
 
@@ -219,15 +226,15 @@ class Instance_engine(object):
             self.broadcast(win_packet(self.winner.uuid))
 
     def react(self, trigger):
-        trigger_type, trigger_params = trigger.trigger_type, trigger.trigger_params
+        trigger_type, trigger_params = trigger.type, trigger.type_params
         reacters =  [i for i in self.triggered_abilities() if i.trigger_type == trigger_type and i.constraint(trigger_params, i)]
-        reacters = sorted(reacters, lambda x: x.order)
-        reacters = sorted(reacters, lambda x: x.speed)
+        reacters = sorted(reacters, key=lambda x: x.order)
+        reacters = sorted(reacters, key=lambda x: x.speed)
         for reacter in reacters:
             self.stack.push(reacter)
 
     def triggered_abilities(self):
-        return [j for i, j in self.gameobjects if isinstance(j, Triggered_ability)]
+        return [j for i, j in self.gameobjects.items() if isinstance(j, Triggered_ability)]
 
     def change_zone(self, mover, destination):
         # DISCUSS
@@ -235,43 +242,114 @@ class Instance_engine(object):
         # This is why we react to the card exiting it's zone when the card is still in that zone
         # This makes it so, we don't need to pass zone arguments to the trigger.
         self.react(Trigger("EXIT", [mover]))
-        mover.order = order()
         self.broadcast(move_packet(mover.uuid, mover.zone, destination))
-        mover.owner.move(mover, destination)
-        mover.zone = destination
+        mover.order = order()
+        mover.owner.move(mover, destination, order)
         self.react(Trigger("ENTER", [mover]))
 
-    def pre_execute(self, target):
+    def card_pre_resolve(self, target):
+        if target.parameters[0] == "RESOURCE":
+            return True
+
+        if isinstance(target, Spell):
+            return self.executable_pre_resolve(target)
+        else:
+            return target.owner.drain(target.cost)
+
+    def executable_pre_resolve(self, target):
         # Drain resources, verify parameters
-        target.owner.drain(target.cost)
+        if not target.owner.drain(target.cost):
+            return False
+
         for i in range(len(target.requirements)):
-            tester = target.parameters[i]
-            if target.parameters[i] in self.gameobjects:
-                tester = self.gameobjects[target.parameters[i]]
-            if not target.requirements[i][1](tester):
-                # If a single parameter is invalid, fizzle
-                return False
+            tester = target.parameters[i + int(isinstance(target, Spell))]
+            # Spells can be played as mana, so the params need to be offset by one.
+            if tester in self.gameobjects:
+                test_object = self.gameobjects[tester]
+                if not target.requirements[i](test_object):
+                    # If a single parameter is invalid, fizzle
+                    return False
 
     def prompt_params(self, card):
         params = None
         if card.zone == Zone.HAND:
-            params = [["PLAY", "RESOURCE"]]
             if isinstance(card, Spell):
-                params += [uuid for uuid, target in self.gameobjects.items() if req(target) for req in card.requirements]
+                params = [["PLAY", "RESOURCE"] + [uuid for uuid, target in self.gameobjects.items() if req(target) for req in card.requirements]]
             else:
-                params += ["OFFENSE", "DEFENSE"]
+                params = [["OFFENSE", "DEFENSE", "RESOURCE"]]
 
         elif card.zone == Zone.OFFENSE:
-            params = [["DEFENSE", *[creature.uuid for creature in player.zones[Zone.DEFENSE] for player in self.players]]]
+            params = [["DEFENSE"]]
+            for player in self.players:
+                if player == card.owner:
+                    continue
+                for blocker in player.zones[Zone.DEFENSE]:
+                    params[0].append(blocker.uuid)
+                if not player.zones[Zone.DEFENSE]:
+                    params[0].append(player.uuid)
 
         self.active_player.send(prompt_params(card.uuid, params))
 
     def play(self, target):
-        # Add the card/ability to stack.
+        # Add the card/ability/zone swap/attack to stack.
+        # Only reveal abilities when their source is not yet revealed.
+        trigger_type = None
+        if isinstance(target, Ability):
+            trigger_type = "USE"
+            if target.parent.zone in [Zone.HAND, Zone.LIBRARY]:
+                self.broadcast(card_reveal_packet([target.parent]))
+        elif target.zone == Zone.HAND:
+            # Reveal a card played from hand.
+            trigger_type = "PLAY"
+            self.broadcast(card_reveal_packet([target]))
+
         self.stack.push(target)
         self.broadcast(stack_add_action_packet(target.uuid))
 
         # Add the trigger to stack
-        self.react(Trigger(["PLAY", "USE"][int(isinstance(target, Ability))], target))
+        if trigger_type:
+            self.react(Trigger(trigger_type, target))
 
         self.rotate_priority()
+
+    def check_errors(self, target):
+        # Generic
+        if not (isinstance(target, Ability) or isinstance(target, Card)):
+            self.active_player.send(INVALID_TYPE_ERROR)
+            return False
+
+        # Executable
+        if isinstance(target, Executable):
+            if target.speed < self.stack.peek_next().speed:
+                self.active_player.send(NOT_FAST_ENOUGH_ERROR)
+                return False
+
+            if self.active_player.can_afford(target.cost):
+                self.active_player.send(NOT_ENOUGH_RESOURCES_ERROR)
+                return False
+
+        if isinstance(target, Ability):
+            if target.parent.zone not in target.usable_zones:
+                self.active_player.send(INVALID_ZONE_ERROR)
+                return False
+
+            if target.max_activations:
+                if target.max_activations <= target.activations:
+                    self.active_player.send(ACTIVATIONS_USED_ERROR)
+                    return False
+
+                target.activations += 1
+
+        if isinstance(target, Creature):
+            if target.exhausted:
+                self.active_player.send(EXHAUSTED_ERROR)
+                return False
+        elif isinstance(target, Permanent):
+            self.active_player.send(INVALID_TYPE_ERROR)
+
+        return True
+
+    def executable_resolve(self, target):
+        triggers = target(self)
+        for trigger in triggers:
+            self.react(trigger)

@@ -32,3 +32,8 @@ class Creature(Permanent):
                             )
         self.health = health
         self.attack = attack
+
+    def fight(self, target):
+        target.health -= self.attack
+        if isinstance(target, Creature):
+            self.health -= target.attack

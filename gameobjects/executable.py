@@ -11,4 +11,3 @@ class Executable():
     """
     def __init__(self):
         self.requirements = []
-        self.parameters = []
