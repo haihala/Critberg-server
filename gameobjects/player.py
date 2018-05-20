@@ -9,6 +9,7 @@ from engine.zone import Zone
 from engine.card_lookup import lookup
 
 from util.config import RESOURCES, STARTING_HEALTH
+from util.instance_packet import card_reveal_packet
 from util.packet import packet_encode
 
 class Player(GameObject):
@@ -58,3 +59,4 @@ class Player(GameObject):
         for _ in amount:
             if len(self.zones[Zone.LIBRARY]):
                 self.move(self.zones[Zone.LIBRARY][0], Zone.HAND)
+        self.send(card_reveal_packet(self.zones[Zone.HAND]))

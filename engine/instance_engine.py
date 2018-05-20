@@ -21,7 +21,6 @@ from util.packet import packet_encode
 from copy import deepcopy
 from itertools import cycle
 from random import shuffle
-# from uuid import UUID
 from uuid import uuid4
 
 def order():
@@ -62,32 +61,23 @@ class Instance_engine(object):
                     activated.order = order()
                     self.add_gameobject(activated)
 
-        # Announce who is going first and what is the order of play
+        # Announce who is playing.
         self.broadcast(game_start_packet(
             [
                 [
-                    player.uuid, player.name,
-                    [
-                        card.uuid
-                        for card in player.zones[Zone.LIBRARY]
-                    ]
+                    player.uuid, player.name, len(player.zones[Zone.LIBRARY])
                 ]
                 for player in self.players
             ]
         ))
 
+        # Announce who is going first.
         self.broadcast(turn_start_packet(self.turn_owner))
 
+        # Draw a starting hand.
         for player in self.players:
-            # Tell each player what does their deck contain.
-            player.send(card_reveal_packet(
-                [
-                    [card.uuid, card.card_id]
-                    for card in player.zones[Zone.LIBRARY]
-                ], True
-            ))
             shuffle(player.zones[Zone.LIBRARY])
-        # At this point, each player knows the uuid for everything and the cards within their deck but not the order.
+            player.draw(5)
 
     def add_gameobject(self, obj):
         ID = str(uuid4())
@@ -110,6 +100,7 @@ class Instance_engine(object):
         if isinstance(target, Permanent):
             self.change_zone(target, Zone.DEFENSE)
         else:
+            self.broadcast(card_reveal_packet([target]))
             if self.pre_execute(target):
                 # Resolve the effect
                 triggers = target(self)
@@ -122,8 +113,8 @@ class Instance_engine(object):
                 for trigger in triggers:
                     self.react(trigger)
             else:
-                pass
-                # Tell everyone the spell fizzled.
+                # Spell fizzles
+                self.change_zone(target, Zone.GRAVEYARD)
 
     def handle_action(self, packet):
         if packet["subtype"] == "pass":

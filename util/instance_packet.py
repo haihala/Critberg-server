@@ -1,22 +1,18 @@
 
 def game_start_packet(players):
-    # Players: [<uuid>, <name>, <list of uuids of the cards representing the deck>]
-    # CardID for unknown cards is 0. Every other player will not know what you have in your deck.
-    # ID's are still shared, to maybe keep track of certain elements
-    return {  # Players and the server must have the same id's for everything
+    # Players: [<uuid>, <name>, <int number of cards in this player's deck>]
+    return {
         "type": "game_update",
         "subtype": "start",
         "players": players
     }
 
-def card_reveal_packet(cards, multiple=False):
-    # Cards is a list of [<uuid>, <cardID>] pairs
-    # Single pair supported as well
-    # Parse on client, all information is in.
+def card_reveal_packet(cards):
+    cards = [[i.uuid, i.card_id] for i in cards]
+
     return {
         "type": "game_update",
         "subtype": "reveal",
-        "multiple": multiple,               # I'm fully aware this parameter isn't needed, but it makes client building slightly easier.
         "cards": cards
     }
 
