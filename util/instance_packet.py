@@ -1,5 +1,3 @@
-from engine.zone import to_string
-
 def game_start_packet(players):
     # Players: [<uuid>, <name>, <int number of cards in this player's deck>]
     return {
@@ -59,6 +57,8 @@ def win_packet(winner):
     }
 
 def move_packet(mover, original, target):
+    from engine.zone import to_string
+
     return {
         "type": "game_update",
         "subtype": "move",
@@ -98,4 +98,12 @@ def resource_gain_packet(player, resources):
         "subtype": "resource_gain",
         "player": player,
         "resources": resources
+    }
+
+def trigger_packet(trigger_type, trigger_params):
+    return {
+        "type": "game_update",
+        "subtype": "stack_add_trigger",
+        "trigger_type": trigger_type,
+        "trigger_params": trigger_params
     }
