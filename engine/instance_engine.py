@@ -175,17 +175,31 @@ class Instance_engine(object):
 
         elif packet["subtype"] == "use":
             # User attempts to use an ability or play a card.
+            self.casting = None
             if packet["instance"] not in self.gameobjects:
                 self.active_player.send(INVALID_UUID_ERROR)
                 return
 
             target = self.gameobjects[packet["instance"]]
             if self.check_errors(target):
-                if (isinstance(target, Executable) and not target.requirements) or target.zone in [Zone.RESOURCE, Zone.DEFENSE]:
-                    self.play(target)
-                else:
+                ask_for_params = True
+                if not target.owner.can_afford(target):                         # If card can't be afforded
+                    if isinstance(target, Card):
+                        target.parameters = ["RESOURCE"]
+                        ask_for_params = False
+                    else:
+                        self.active_player.send(NOT_ENOUGH_RESOURCES_ERROR)
+
+                elif isinstance(target, Executable) and not target.requirements:
+                    ask_for_params = False
+                elif target.zone in [Zone.RESOURCE, Zone.DEFENSE]:
+                    ask_for_params = False
+
+                if ask_for_params:
                     self.prompt_params(target)
                     self.casting = target
+                else:
+                    self.play(target)
 
         elif packet["subtype"] == "prompt" and self.casting:
             self.casting.parameters = packet["params"]
@@ -214,7 +228,6 @@ class Instance_engine(object):
                 player.dead = True
                 self.broadcast(lose_packet(player.uuid))
 
-
         if all(player.dead for player in self.players):
             self.over = True
             self.broadcast(tie_packet())
@@ -228,8 +241,10 @@ class Instance_engine(object):
     def react(self, trigger):
         trigger_type, trigger_params = trigger.type, trigger.type_params
         reacters =  [i for i in self.triggered_abilities() if i.trigger_type == trigger_type and i.constraint(trigger_params, i)]
-        reacters = sorted(reacters, key=lambda x: x.order)
-        reacters = sorted(reacters, key=lambda x: x.speed)
+        order_cap = float(order())
+        reacters = sorted(reacters, key=lambda x: float(x.speed) + (x.order/order_cap))
+        # Note, this only works as long as speed is an int.
+        self.broadcast(trigger_packet(trigger_type, trigger_params))
         for reacter in reacters:
             self.stack.push(reacter)
 
@@ -322,10 +337,6 @@ class Instance_engine(object):
         if isinstance(target, Executable):
             if target.speed < self.stack.peek_next().speed:
                 self.active_player.send(NOT_FAST_ENOUGH_ERROR)
-                return False
-
-            if self.active_player.can_afford(target.cost):
-                self.active_player.send(NOT_ENOUGH_RESOURCES_ERROR)
                 return False
 
         if isinstance(target, Ability):
